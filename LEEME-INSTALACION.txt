@@ -1,0 +1,26 @@
+MI AGENDA · ORIENTADORA CARMEN MORA
+
+PUBLICAR
+Abre tu repositorio agenda_planificador_rosa_empolvado en GitHub. Sube todos los archivos de esta carpeta, conservando assets y sus subcarpetas, y sustituye su index.html. No modifiques el repositorio de Historia.
+Dirección de la agenda: https://orientadoracarmenmora-max.github.io/agenda_planificador_rosa_empolvado/
+En Settings > Pages, elige Deploy from a branch, main y / (root). Abre el enlace HTTPS que facilite GitHub Pages.
+
+INSTALAR
+Abre ese enlace directamente, fuera del recuadro de Google Sites.
+Windows: abre con Chrome o Edge y utiliza Instalar aplicación en el menú del navegador o el botón Instalar de la agenda.
+Mac: utiliza Chrome y su opción Instalar; también puedes usar Safari > Archivo > Añadir al Dock en versiones compatibles de macOS.
+La primera apertura necesita conexión. Espera a que aparezca Sin conexión disponible. Después podrás abrirla desde su icono sin internet.
+
+TUS DATOS
+La agenda guarda automáticamente en este navegador y dispositivo. Guardar descarga una copia JSON conjunta de calendario, planificador y diario; Cargar permite recuperarla. Haz copias periódicas. Los datos no se sincronizan entre personas ni dispositivos; borrar los datos del navegador puede eliminarlos.
+Guardar PDF e Imprimir generan únicamente la sección elegida.
+
+ACTUALIZACIONES
+Al publicar una versión nueva, vuelve a abrir con internet. Si aparece Actualizar, pulsa ese botón después de terminar tus cambios.
+
+ICONO ROSA EMPOLVADO Y MARRÓN TOPO
+Publica estos archivos en el mismo repositorio y en la misma ruta de siempre para conservar el acceso a los datos de este navegador. Antes de actualizar, usa Guardar para descargar una copia de tus datos. Abre la agenda con conexión y pulsa Actualizar cuando aparezca.
+El sistema puede tardar en renovar el icono de una aplicación ya instalada. Si mantiene el antiguo, guarda primero una copia JSON y vuelve a añadir el acceso desde el mismo enlace, sin borrar los datos del navegador.
+
+DESPLAZAMIENTO
+La barra vertical está a la derecha y las pestañas de las tres secciones permanecen arriba. En móvil puedes seguir deslizando con el dedo. La visibilidad de la barra también depende de la configuración de tu sistema.
