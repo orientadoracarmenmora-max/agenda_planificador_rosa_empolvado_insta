@@ -10,3 +10,8 @@
  html::-webkit-scrollbar-thumb:hover, #app .day-band .calendar-scroll::-webkit-scrollbar-thumb:hover { background: #79564c; }
 }
 @media (max-width: 599px) { html { scroll-padding-top: 70px; } }
+
+/* Solo se muestra la acción de instalación; el guardado continúa en segundo plano. */
+#agenda-save, #agenda-offline { display: none; }
+.agenda-install { justify-content: center; }
+.agenda-install:not(:has(button:not([hidden]))) { display: none; }
