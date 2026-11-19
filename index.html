@@ -1481,7 +1481,14 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
   if (priorities) priorities.id='priorities-section';
   if (notes) notes.id='notes-section';
   if (sessions) sessions.querySelector('h2').textContent='Mi planificación para hoy';
-  if (notes) notes.querySelector('h2').textContent='Mi agenda';
+  if (notes) {
+    notes.querySelector('h2').textContent='Mi agenda';
+    const signature=document.createElement('div');
+    signature.className='agenda-hashtag';
+    signature.textContent='#orientadoracarmenmora';
+    signature.style.cssText='text-align:center;padding:0 16px 18px;color:#795a5f;font:700 22px Caveat,cursive;';
+    notes.appendChild(signature);
+  }
   if (columns && dayEvents && sessions && notes) columns.append(dayEvents,sessions,notes);
 
   // La pestaña "Notas" aprovecha el almacenamiento diario que ya tenía la agenda.
