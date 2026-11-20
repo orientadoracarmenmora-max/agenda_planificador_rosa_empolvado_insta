@@ -2023,6 +2023,8 @@ window.addEventListener('pagehide',stop);updateLabel();
 #notes-section .notebook-object>button{position:absolute;z-index:2;display:none;padding:0;touch-action:none}
 #notes-section .notebook-object.is-selected>button{display:grid;place-items:center}
 #notes-section .notebook-object .notebook-move{left:8px;top:-16px;min-width:54px;height:30px;border-radius:7px;font-size:12px}
+#notes-section .notebook-object .notebook-recolor{position:absolute;z-index:2;display:none;right:43px;top:-14px;width:32px;height:28px;padding:2px;border:1px solid #dbc9c7;border-radius:7px;background:#fff;cursor:pointer;touch-action:auto}
+#notes-section .notebook-object.is-selected .notebook-recolor{display:block}
 #notes-section .notebook-object .notebook-remove{right:8px;top:-14px;width:28px;height:28px;border-radius:50%}
 #notes-section .notebook-object .notebook-corner{width:14px;height:14px;border:2px solid #9b6e80;border-radius:50%}
 #notes-section .notebook-corner[data-corner^="n"]{top:-7px}
@@ -2040,6 +2042,33 @@ window.addEventListener('pagehide',stop);updateLabel();
 #notes-section .notebook-item.is-tape{margin-block:0;min-height:34px;align-items:center}
 #notes-section .notebook-item.is-tape .notebook-object{padding-block:3px}
 #notes-section .notebook-item.is-tape .notebook-tape{height:var(--object-height,24px);padding-block:0}
+#notes-section .notebook-note-style[hidden]{display:none}
+#notes-section .notebook-note-style select{padding:6px;border:1px solid #dbc9c7;border-radius:7px;background:#fff;color:#61463f}
+#notes-section .notebook-object:has(.notebook-frame-paper){margin-block:8px}
+#notes-section .notebook-frame-paper{
+ --paper-pink:color-mix(in srgb,var(--frame-color) 38%,#fff7f6);
+ --paper-wash:color-mix(in srgb,var(--frame-color) 18%,transparent);
+ border-radius:24px;padding:15px;background:
+ repeating-linear-gradient(90deg,var(--paper-wash) 0 14px,transparent 14px 28px),
+ repeating-linear-gradient(0deg,var(--paper-wash) 0 14px,transparent 14px 28px),var(--paper-pink);
+ box-shadow:0 3px 5px #61463f27;
+}
+#carmen-diary #notes-section .notebook-object .notebook-frame-paper .notebook-frame{
+ border:0;border-radius:15px;background:#fffafaeb;padding:14px 22px 14px 14px;min-height:72px;color:#61463f
+}
+#notes-section .notebook-frame-paper .notebook-frame-symbol{top:22px;right:23px;z-index:1}
+#notes-section .notebook-frame-paper.is-taped::before{
+ content:"";position:absolute;z-index:1;top:-12px;left:50%;width:34%;height:25px;transform:translateX(-50%) rotate(-2deg);
+ background:linear-gradient(145deg,#c3ada170,#947d7270);
+ clip-path:polygon(1% 0,99% 0,97% 20%,100% 34%,98% 49%,100% 68%,97% 81%,99% 100%,0 100%,2% 82%,0 68%,3% 49%,0 34%,2% 20%);
+ pointer-events:none
+}
+#notes-section .notebook-frame-paper.is-punched{padding-left:32px;border-radius:20px}
+#notes-section .notebook-frame-paper.is-punched::before{
+ content:"";position:absolute;inset:9px auto 9px 6px;width:19px;
+ background:radial-gradient(circle at 9.5px 12px,#fff 0 5px,#61463f2b 6px,transparent 7.5px) 0 0/19px 24px repeat-y;
+ pointer-events:none
+}
 #notes-section .notebook-decor button,#notes-section .notebook-item button{padding:5px 9px;border:1px solid #dbc9c7;border-radius:7px;background:white;color:#61463f;cursor:pointer}
 </style>
 <script>
@@ -2049,7 +2078,7 @@ window.addEventListener('pagehide',stop);updateLabel();
  if(!content||!date)return;
  const decor=document.createElement('div');
  decor.className='notebook-decor';
- decor.innerHTML='<details><summary>Decorar</summary><div class="notebook-menu"><button type="button" data-kind="tape" aria-pressed="false">Cinta</button><button type="button" data-kind="frame" aria-pressed="false">Nota</button></div><div class="notebook-menu" data-decor-options hidden><details class="notebook-symbol-picker"><summary aria-label="Elegir símbolo"><span data-current-symbol>✿</span></summary><div class="notebook-symbols" role="group" aria-label="Símbolo"><button type="button" data-symbol="✿" aria-label="Flor" aria-pressed="true">✿</button><button type="button" data-symbol="♡" aria-label="Corazón" aria-pressed="false">♡</button><button type="button" data-symbol="✦" aria-label="Estrella" aria-pressed="false">✦</button><button type="button" data-symbol="●" aria-label="Lunar" aria-pressed="false">●</button><button type="button" data-symbol="◆" aria-label="Rombo" aria-pressed="false">◆</button><button type="button" data-symbol="✧" aria-label="Destello" aria-pressed="false">✧</button><button type="button" data-symbol="☾" aria-label="Luna" aria-pressed="false">☾</button><button type="button" data-symbol="❋" aria-label="Flor de ocho pétalos" aria-pressed="false">❋</button><button type="button" data-symbol="❦" aria-label="Hoja" aria-pressed="false">❦</button><button type="button" data-symbol="∿" aria-label="Onda" aria-pressed="false">∿</button></div></details><label>Color <input type="color" value="#ab607c"></label></div></details><p class="notebook-placement" role="status" hidden>Toca el cuaderno donde quieras colocarla.</p><div class="notebook-undo" hidden><span role="status"></span><button type="button">Deshacer</button></div>';
+ decor.innerHTML='<details><summary>Decorar</summary><div class="notebook-menu"><button type="button" data-kind="tape" aria-pressed="false">Cinta</button><button type="button" data-kind="frame" aria-pressed="false">Nota</button></div><div class="notebook-menu" data-decor-options hidden><label class="notebook-note-style" hidden>Estilo <select data-frame-style><option value="taped">Cuadros con cinta</option><option value="punched">Hoja perforada</option><option value="classic">Marco sencillo</option></select></label><details class="notebook-symbol-picker"><summary aria-label="Elegir símbolo"><span data-current-symbol>✿</span></summary><div class="notebook-symbols" role="group" aria-label="Símbolo"><button type="button" data-symbol="✿" aria-label="Flor" aria-pressed="true">✿</button><button type="button" data-symbol="♡" aria-label="Corazón" aria-pressed="false">♡</button><button type="button" data-symbol="✦" aria-label="Estrella" aria-pressed="false">✦</button><button type="button" data-symbol="●" aria-label="Lunar" aria-pressed="false">●</button><button type="button" data-symbol="◆" aria-label="Rombo" aria-pressed="false">◆</button><button type="button" data-symbol="✧" aria-label="Destello" aria-pressed="false">✧</button><button type="button" data-symbol="☾" aria-label="Luna" aria-pressed="false">☾</button><button type="button" data-symbol="❋" aria-label="Flor de ocho pétalos" aria-pressed="false">❋</button><button type="button" data-symbol="❦" aria-label="Hoja" aria-pressed="false">❦</button><button type="button" data-symbol="∿" aria-label="Onda" aria-pressed="false">∿</button></div></details><label>Color <input type="color" value="#ab607c"></label></div></details><p class="notebook-placement" role="status" hidden>Toca el cuaderno donde quieras colocarla.</p><div class="notebook-undo" hidden><span role="status"></span><button type="button">Deshacer</button></div>';
  content.after(decor);
  const menu=decor.querySelector('details'),surface=document.createElement('div');
  surface.className='notebook-segments';
@@ -2182,6 +2211,7 @@ window.addEventListener('pagehide',stop);updateLabel();
        field.addEventListener('input',()=>{item.text=field.value;save();});
        const frame=document.createElement('div');
        frame.className='notebook-frame-wrap';
+       if(item.style==='taped'||item.style==='punched')frame.classList.add('notebook-frame-paper','is-'+item.style);
        frame.style.setProperty('--frame-color',item.color||'#ab607c');
        const symbol=document.createElement('span');
        symbol.className='notebook-frame-symbol';symbol.setAttribute('aria-hidden','true');
@@ -2215,7 +2245,7 @@ window.addEventListener('pagehide',stop);updateLabel();
        event.preventDefault();
      }
      object.addEventListener('pointerdown',event=>{
-       if(event.target.closest('button,textarea'))return;
+       if(event.target.closest('button,textarea,input'))return;
        begin(event);
      });
      object.addEventListener('pointermove',event=>{
@@ -2276,6 +2306,20 @@ window.addEventListener('pagehide',stop);updateLabel();
        placement.hidden=false;
      });
      object.append(remove,moveButton);
+     if(item.kind==='frame'){
+       const recolor=document.createElement('input');
+       recolor.type='color';recolor.className='notebook-recolor';
+       recolor.value=item.color||'#ab607c';
+       recolor.setAttribute('aria-label','Cambiar color de la nota');
+       const applyColor=()=>{
+         item.color=recolor.value;
+         object.querySelector('.notebook-frame-wrap').style.setProperty('--frame-color',item.color);
+         save();
+       };
+       recolor.addEventListener('input',applyColor);
+       recolor.addEventListener('change',applyColor);
+       object.append(recolor);
+     }
      for(const [corner,label] of [['nw','superior izquierda'],['ne','superior derecha'],['sw','inferior izquierda'],['se','inferior derecha']]){
        const handle=document.createElement('button');
        handle.type='button';handle.className='notebook-corner';handle.dataset.corner=corner;
@@ -2312,11 +2356,12 @@ window.addEventListener('pagehide',stop);updateLabel();
  }
  const options=decor.querySelector('[data-decor-options]');
  const placement=decor.querySelector('.notebook-placement');
+ const frameStyle=decor.querySelector('[data-frame-style]');
  const kinds=[...decor.querySelectorAll('[data-kind]')];
  const symbols=[...decor.querySelectorAll('[data-symbol]')];
  const picker=decor.querySelector('.notebook-symbol-picker'),currentSymbol=picker.querySelector('[data-current-symbol]');
  function choose(next){
-   kind=next;moving=null;options.hidden=!kind;placement.hidden=!kind;picker.open=false;
+   kind=next;moving=null;frameStyle.parentElement.hidden=kind!=='frame';options.hidden=!kind;placement.hidden=!kind;picker.open=false;
    placement.textContent='Toca el cuaderno donde quieras colocarla.';
    kinds.forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.kind===kind)));
  }
@@ -2344,7 +2389,8 @@ window.addEventListener('pagehide',stop);updateLabel();
      save();render();
      return;
    }
-   selected={kind,at,gap:target.gap,text:'',motif,color:decor.querySelector('input').value,width:kind==='tape'?46:100};
+   selected={kind,at,gap:target.gap,text:'',motif,color:decor.querySelector('input').value,width:kind==='tape'?46:frameStyle.value==='classic'?100:Math.min(82,Math.max(36,300/content.clientWidth*100))};
+   if(kind==='frame'&&frameStyle.value!=='classic'){selected.style=frameStyle.value;selected.height=Math.min(255,Math.max(180,content.clientWidth*0.29));}
    items.push(selected);
    save();render();choose('');menu.open=false;
  });
