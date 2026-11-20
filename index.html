@@ -2071,22 +2071,52 @@ window.addEventListener('pagehide',stop);updateLabel();
    original.dispatchEvent(new Event('input',{bubbles:true}));
    save();
  }
- function dropPosition(clientY){
-   let offset=0,closest={distance:Infinity,at:0,gap:0};
-   for(const field of surface.querySelectorAll('.notebook-text')){
-     if(field.hidden)continue;
-     const box=field.getBoundingClientRect(),lineHeight=parseFloat(getComputedStyle(field).lineHeight)||34;
-     const lineStarts=[0,...Array.from(field.value.matchAll(/\n/g),match=>match.index+1)];
-     const rowCount=Math.max(lineStarts.length,Math.floor(box.height/lineHeight));
-     for(let line=0;line<=rowCount;line++){
-       const y=Math.min(box.bottom,box.top+line*lineHeight);
-       const distance=Math.abs(clientY-y);
-       if(distance>=closest.distance)continue;
-       closest={distance,at:offset+(lineStarts[line]??field.value.length),gap:Math.max(0,line-lineStarts.length)*lineHeight};
-     }
-     offset+=field.value.length;
+ function linePosition(field,clientY){
+   const box=field.getBoundingClientRect(),style=getComputedStyle(field);
+   const lineHeight=parseFloat(style.lineHeight)||34;
+   const paddingTop=parseFloat(style.paddingTop)||0;
+   const row=Math.max(0,Math.floor((clientY-box.top-paddingTop+field.scrollTop)/lineHeight));
+   const value=field.value;
+   if(row===0)return {at:0,gap:0};
+   const mirror=document.createElement('div');
+   Object.assign(mirror.style,{
+     position:'fixed',left:'-10000px',top:'0',visibility:'hidden',
+     width:Math.max(1,field.clientWidth-parseFloat(style.paddingLeft)-parseFloat(style.paddingRight))+'px',
+     boxSizing:'content-box',margin:'0',padding:'0',border:'0',font:style.font,
+     lineHeight:lineHeight+'px',letterSpacing:style.letterSpacing,wordSpacing:style.wordSpacing,
+     whiteSpace:'pre-wrap',overflowWrap:'break-word',tabSize:style.tabSize
+   });
+   const text=document.createTextNode(value+'\u200b');
+   mirror.append(text);document.body.append(mirror);
+   const range=document.createRange();
+   const target=mirror.getBoundingClientRect().top+row*lineHeight-2;
+   let left=0,right=value.length;
+   while(left<right){
+     const middle=Math.floor((left+right)/2);
+     range.setStart(text,middle);range.setEnd(text,middle+1);
+     if(range.getBoundingClientRect().top<target)left=middle+1;
+     else right=middle;
    }
-   return closest;
+   if(left>0&&/^[\uDC00-\uDFFF]$/.test(value[left]))left--;
+   const occupied=Math.round(mirror.getBoundingClientRect().height/lineHeight);
+   mirror.remove();
+   return {at:left,gap:Math.max(0,row-occupied)*lineHeight};
+ }
+ function dropPosition(clientY,preferred=null){
+   const fields=original.hidden?[...surface.querySelectorAll('.notebook-text')]:[original];
+   let offset=0,closest=null;
+   for(const field of fields){
+     const start=offset;
+     offset+=field.value.length;
+     if(field.hidden)continue;
+     const box=field.getBoundingClientRect();
+     const distance=Math.max(box.top-clientY,clientY-box.bottom,0);
+     if(field===preferred||!closest||distance<closest.distance)closest={field,start,distance};
+     if(field===preferred)break;
+   }
+   if(!closest)return {at:0,gap:0};
+   const target=linePosition(closest.field,clientY);
+   return {at:closest.start+target.at,gap:target.gap};
  }
  function render(){
    if(!original)return;
@@ -2303,25 +2333,18 @@ window.addEventListener('pagehide',stop);updateLabel();
    if(!field)return;
    load();
    if(!original)return;
-   const cursor=field.selectionStart;
-   let at=cursor===0?0:field.value.lastIndexOf('\n',cursor-1)+1;
-   if(field!==original){
-     for(const part of surface.querySelectorAll('.notebook-text')){
-       if(part===field)break;
-       at+=part.value.length;
-     }
-   }
+   const target=dropPosition(event.clientY,field);
+   const at=target.at;
    caret=at;
    if(moving){
-     const target=dropPosition(event.clientY);
-     moving.at=target.gap?target.at:at;
+     moving.at=at;
      moving.gap=target.gap;
      selected=moving;
      moving=null;placement.hidden=true;
      save();render();
      return;
    }
-   selected={kind,at,text:'',motif,color:decor.querySelector('input').value,width:kind==='tape'?46:100};
+   selected={kind,at,gap:target.gap,text:'',motif,color:decor.querySelector('input').value,width:kind==='tape'?46:100};
    items.push(selected);
    save();render();choose('');menu.open=false;
  });
