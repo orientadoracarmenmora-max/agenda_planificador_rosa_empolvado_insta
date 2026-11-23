@@ -1557,7 +1557,7 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
   #carmen-diary #note-tabs{display:none!important}
   #carmen-diary #free-note{min-height:390px!important;resize:vertical!important;
     font-size:16px!important;line-height:34px!important;padding:3px 5px!important;
-    background:repeating-linear-gradient(to bottom,transparent 0,transparent 33px,#eadfe2 33px,#eadfe2 34px)!important;
+    background:transparent!important;
     border:0!important;overflow:hidden}
   #carmen-diary #notes-section .notecontent{padding:13px 20px 24px}
   @media(max-width:650px){#carmen-diary .font-control{width:100%}#carmen-diary #free-note{min-height:300px!important}}
@@ -2099,7 +2099,7 @@ window.addEventListener('pagehide',stop);updateLabel();
 #notes-section .notebook-tape{flex:1;text-align:center;overflow:hidden;white-space:nowrap;letter-spacing:8px;color:var(--tape-color);background:color-mix(in srgb,var(--tape-color) 18%,white);border-radius:4px;padding:4px}
 #carmen-diary #notes-section .notebook-frame{flex:1;min-width:0;min-height:95px;padding:11px;border:2px dashed var(--frame-color);border-radius:13px;background:color-mix(in srgb,var(--frame-color) 9%,white);color:#61463f;resize:vertical;font:inherit}
 #carmen-diary #notes-section{overflow:visible}
-#notes-section .notebook-segments{container-type:inline-size;background:repeating-linear-gradient(to bottom,transparent 0 33px,#eadfe2 33px 34px)}
+#notes-section .notebook-segments{container-type:inline-size}
 #notes-section .notebook-flow{display:flow-root}
 #notes-section .notebook-item{float:left;display:grid;width:var(--wrap-width);margin:0;pointer-events:none}
 #notes-section .notebook-item.is-right{float:right}
