@@ -2045,14 +2045,22 @@ window.addEventListener('pagehide',stop);updateLabel();
 #notes-section .notebook-item{float:left;display:grid;width:var(--wrap-width);margin:0;pointer-events:none}
 #notes-section .notebook-item.is-right{float:right}
 #notes-section .notebook-item .notebook-object{grid-area:1/1;align-self:start;justify-self:start;width:calc(var(--width-number) * 1cqw);margin-left:calc((var(--left-number) - var(--row-left,0)) * 1cqw);pointer-events:auto}
-#notes-section .notebook-tape.notebook-tape-image{display:block;width:100%;height:var(--object-height);padding:0;background:none;object-fit:fill;pointer-events:none}
 #notes-section .notebook-item .is-tape{padding-block:3px}
 #notes-section .notebook-item .is-tape .notebook-tape{height:var(--object-height,24px);padding-block:0}
 #notes-section .notebook-item .is-sticker{margin-top:-10px;z-index:2}
 #carmen-diary #notes-section .notebook-text{display:block;min-height:var(--writing-height,34px);line-height:34px;font-size:16px;padding:0 5px;background:transparent;white-space:pre-wrap;overflow-wrap:break-word;cursor:text}
 #carmen-diary #notes-section .notebook-text[hidden]{display:none!important}
+#notes-section .notebook-note-style{display:flex;flex-wrap:wrap;gap:8px;width:100%;--sample-color:#ab607c}
 #notes-section .notebook-note-style[hidden]{display:none}
-#notes-section .notebook-note-style select{padding:6px;border:1px solid #dbc9c7;border-radius:7px;background:#fff;color:#61463f}
+#notes-section .notebook-note-style button{display:grid;justify-items:center;gap:5px;padding:6px 7px;font-size:12px}
+#notes-section .notebook-frame-sample{display:block;position:relative;width:58px;height:36px;border-radius:6px;background:color-mix(in srgb,var(--sample-color) 10%,white)}
+#notes-section .notebook-frame-sample.is-classic{border:2px dashed var(--sample-color)}
+#notes-section .notebook-frame-sample.is-taped,#notes-section .notebook-frame-sample.is-punched{
+ background:repeating-linear-gradient(90deg,#ffffff60 0 5px,transparent 5px 10px),
+ repeating-linear-gradient(0deg,#ffffff60 0 5px,transparent 5px 10px),color-mix(in srgb,var(--sample-color) 38%,white)
+}
+#notes-section .notebook-frame-sample.is-taped::after{content:"";position:absolute;top:-3px;left:18px;width:22px;height:7px;background:#b39e94bb;transform:rotate(-5deg)}
+#notes-section .notebook-frame-sample.is-punched::after{content:"";position:absolute;inset:4px auto 4px 4px;width:7px;background:radial-gradient(circle,#fff 0 2px,transparent 2.5px) 0 0/7px 9px repeat-y}
 #notes-section .notebook-sticker-options[hidden]{display:none}
 #notes-section .notebook-sticker-options:not([hidden]){display:grid;grid-template-columns:repeat(auto-fit,42px);gap:6px;width:min(100%,450px);padding:4px}
 #notes-section .notebook-sticker-options button{display:grid;place-items:center;width:42px;height:42px;padding:3px}
@@ -2091,7 +2099,6 @@ window.addEventListener('pagehide',stop);updateLabel();
 #notes-section .notebook-object.is-text{z-index:4}
 #notes-section .notebook-object.is-floating.is-selected{z-index:3}
 #notes-section .notebook-object.is-text.is-selected{z-index:5}
-#notes-section .notebook-object.is-picked{z-index:6}
 #notes-section .notebook-object.is-selected{z-index:3}
 #notes-section .notebook-object.is-slot{visibility:hidden;pointer-events:none}
 #notes-section .notebook-object.is-floating .notebook-sticker-art{height:var(--object-height)}
@@ -2099,16 +2106,17 @@ window.addEventListener('pagehide',stop);updateLabel();
 #notes-section .notebook-text-box{display:block;width:100%;height:var(--object-height);border:0;background:transparent;resize:none;padding:4px;color:#362d27;font:inherit;font-size:16px}
 #notes-section .notebook-text-box:focus{outline:0}
 #notes-section .notebook-text-box:focus-visible{outline:1px dashed #9b6e80}
-#notes-section .notebook-tools{display:none;position:absolute;bottom:100%;align-items:center;gap:3px;width:max-content;max-width:100vw;z-index:1}
-#notes-section .notebook-object.is-selected .notebook-tools{display:flex}
-#notes-section .notebook-tools button,#notes-section .notebook-tools input,#notes-section .notebook-resize{width:44px;height:44px;padding:0;font-size:20px;touch-action:manipulation}
-#notes-section .notebook-tools input{border:1px solid #dbc9c7;border-radius:7px;background:#fff}
-#notes-section .notebook-tools .notebook-move,#notes-section .notebook-tools .notebook-rotate,#notes-section .notebook-resize{touch-action:none}
-#notes-section .notebook-object.is-selected .notebook-resize{display:grid;place-items:center}
-#notes-section .notebook-resize{display:none;position:absolute;z-index:1;right:0;bottom:0;transform:translate(55%,55%);cursor:nwse-resize}
+#notes-section .notebook-tools{display:none;position:absolute;inset:auto -2px calc(100% + 12px);height:36px;z-index:2;pointer-events:none}
+#notes-section .notebook-object.is-selected .notebook-tools{display:block}
+#notes-section .notebook-tools button,#notes-section .notebook-tools input{position:absolute;top:0;width:36px;height:36px;padding:0;font-size:22px;touch-action:manipulation;pointer-events:auto}
+#notes-section .notebook-tools .notebook-remove{left:-3px}
+#notes-section .notebook-tools .notebook-rotate{right:-3px;touch-action:none}
+#notes-section .notebook-tools input{left:50%;transform:translateX(-50%);width:28px;border:1px solid #dbc9c7;border-radius:7px;background:#fff}
+#carmen-diary #notes-section .notebook-object .notebook-resize{display:none;position:absolute;z-index:1;right:0;bottom:0;transform:translate(55%,55%);width:36px;height:36px;min-height:0;padding:0;border:0;border-radius:50%;background:transparent;touch-action:none;cursor:nwse-resize}
+#carmen-diary #notes-section .notebook-object.is-selected .notebook-resize{display:grid;place-items:center}
+#notes-section .notebook-resize::before{content:"⤡";display:grid;place-items:center;width:21px;height:21px;border-radius:50%;background:#fff;color:#91586e;font:700 16px Arial,sans-serif;box-shadow:0 0 0 1px #91586e}
+#notes-section .notebook-resize:focus-visible{outline:2px solid #91586e}
 #notes-section .notebook-segments.is-placing,#notes-section .notebook-segments.is-placing *{cursor:crosshair}
-#notes-section .notebook-object-picker{display:inline-flex;align-items:center;gap:8px;font-size:14px}
-#notes-section .notebook-object-picker select{min-height:40px;border:1px solid #dbc9c7;border-radius:7px;background:#fff;color:#61463f;padding:4px}
 @media print{#notes-section .notebook-decor,#notes-section .notebook-tools,#notes-section .notebook-resize{display:none!important}}
 </style>
 <script>
@@ -2118,15 +2126,13 @@ window.addEventListener('pagehide',stop);updateLabel();
  if(!content||!date)return;
  const decor=document.createElement('div');
  decor.className='notebook-decor';
- decor.innerHTML='<details><summary>Decorar</summary><div class="notebook-menu"><button type="button" data-kind="tape" aria-pressed="false">Cinta</button><button type="button" data-kind="frame" aria-pressed="false">Nota</button><button type="button" data-kind="sticker" aria-pressed="false">Pegatina</button><button type="button" data-kind="text" aria-pressed="false">Texto</button></div><div class="notebook-menu" data-decor-options hidden><div class="notebook-sticker-options" role="group" aria-label="Pegatinas disponibles" hidden></div><div class="notebook-sticker-options notebook-tape-options" role="group" aria-label="Diseños de cinta" hidden></div><label class="notebook-note-style" hidden>Estilo <select data-frame-style><option value="taped">Cuadros con cinta</option><option value="punched">Hoja perforada</option><option value="classic">Marco sencillo</option></select></label><details class="notebook-symbol-picker"><summary aria-label="Elegir símbolo"><span data-current-symbol>✿</span></summary><div class="notebook-symbols" role="group" aria-label="Símbolo"><button type="button" data-symbol="✿" aria-label="Flor" aria-pressed="true">✿</button><button type="button" data-symbol="♡" aria-label="Corazón" aria-pressed="false">♡</button><button type="button" data-symbol="✦" aria-label="Estrella" aria-pressed="false">✦</button><button type="button" data-symbol="●" aria-label="Lunar" aria-pressed="false">●</button><button type="button" data-symbol="◆" aria-label="Rombo" aria-pressed="false">◆</button><button type="button" data-symbol="✧" aria-label="Destello" aria-pressed="false">✧</button><button type="button" data-symbol="☾" aria-label="Luna" aria-pressed="false">☾</button><button type="button" data-symbol="❋" aria-label="Flor de ocho pétalos" aria-pressed="false">❋</button><button type="button" data-symbol="❦" aria-label="Hoja" aria-pressed="false">❦</button><button type="button" data-symbol="∿" aria-label="Onda" aria-pressed="false">∿</button></div></details><label>Color <input type="color" value="#ab607c"></label></div></details><label class="notebook-object-picker" hidden>Seleccionar elemento <select aria-label="Seleccionar elemento"></select></label><p class="notebook-placement" role="status" hidden>Toca el cuaderno donde quieras colocarla.</p><div class="notebook-undo" hidden><span role="status"></span><button type="button">Deshacer</button></div>';
+ decor.innerHTML='<details><summary>Decorar</summary><div class="notebook-menu"><button type="button" data-kind="tape" aria-pressed="false">Cinta</button><button type="button" data-kind="frame" aria-pressed="false">Nota</button><button type="button" data-kind="sticker" aria-pressed="false">Pegatina</button><button type="button" data-kind="text" aria-pressed="false">Texto</button></div><div class="notebook-menu" data-decor-options hidden><div class="notebook-sticker-options" role="group" aria-label="Pegatinas disponibles" hidden></div><div class="notebook-note-style" role="group" aria-label="Estilo de nota" hidden><button type="button" data-frame-style="taped" aria-pressed="true"><span aria-hidden="true" class="notebook-frame-sample is-taped"></span>Cuadros con cinta</button><button type="button" data-frame-style="punched" aria-pressed="false"><span aria-hidden="true" class="notebook-frame-sample is-punched"></span>Hoja perforada</button><button type="button" data-frame-style="classic" aria-pressed="false"><span aria-hidden="true" class="notebook-frame-sample is-classic"></span>Marco sencillo</button></div><details class="notebook-symbol-picker"><summary aria-label="Elegir símbolo"><span data-current-symbol>✿</span></summary><div class="notebook-symbols" role="group" aria-label="Símbolo"><button type="button" data-symbol="✿" aria-label="Flor" aria-pressed="true">✿</button><button type="button" data-symbol="♡" aria-label="Corazón" aria-pressed="false">♡</button><button type="button" data-symbol="✦" aria-label="Estrella" aria-pressed="false">✦</button><button type="button" data-symbol="●" aria-label="Lunar" aria-pressed="false">●</button><button type="button" data-symbol="◆" aria-label="Rombo" aria-pressed="false">◆</button><button type="button" data-symbol="✧" aria-label="Destello" aria-pressed="false">✧</button><button type="button" data-symbol="☾" aria-label="Luna" aria-pressed="false">☾</button><button type="button" data-symbol="❋" aria-label="Flor de ocho pétalos" aria-pressed="false">❋</button><button type="button" data-symbol="❦" aria-label="Hoja" aria-pressed="false">❦</button><button type="button" data-symbol="∿" aria-label="Onda" aria-pressed="false">∿</button></div></details><label>Color <input type="color" value="#ab607c"></label></div></details><p class="notebook-placement" role="status" hidden>Toca el cuaderno donde quieras colocarla.</p><div class="notebook-undo" hidden><span role="status"></span><button type="button">Deshacer</button></div>';
  content.after(decor);
- const elementPicker=decor.querySelector('.notebook-object-picker select');
- const liveObjects=new Map();
  const menu=decor.querySelector('details'),surface=document.createElement('div');
  surface.className='notebook-segments';
  const labels={tape:'Cinta',frame:'Nota',sticker:'Pegatina',text:'Cuadro de texto'};
  const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
- let day='',items=[],original=null,kind='',motif='✿',selected=null,removed=null,moving=null;
+ let day='',items=[],original=null,kind='',motif='✿',selected=null,removed=null;
  const undo=decor.querySelector('.notebook-undo');
  undo.querySelector('button').addEventListener('click',()=>{
    if(!removed)return;
@@ -2218,7 +2224,6 @@ window.addEventListener('pagehide',stop);updateLabel();
    const text=original.value;
    if(surface.parentNode!==content)content.append(surface);
    surface.replaceChildren(original);
-   liveObjects.clear();
    const legacy=items.filter(item=>item.at!==undefined);
    original.hidden=legacy.length>0;
    const groups=[];
@@ -2297,60 +2302,21 @@ window.addEventListener('pagehide',stop);updateLabel();
      if(item.position&&!item.deleted)renderObject(item,surface);
    }
    layoutCanvas();
-   const liveItems=items.filter(item=>!item.deleted);
-   elementPicker.parentElement.hidden=liveItems.length<2;
-   elementPicker.replaceChildren(new Option('Elige un elemento',''),...liveItems.map((item,index)=>{
-     const detail=item.kind==='sticker'?stickerLibrary.get(item.sticker)?.name:item.text?.trim().slice(0,30);
-     return new Option((index+1)+'. '+labels[item.kind]+(detail?' · '+detail:''),String(items.indexOf(item)));
-   }));
-   elementPicker.value=selected?String(items.indexOf(selected)):'';
-   positionTools();
  }
- function positionTools(){
-   const object=surface.querySelector('.is-selected');
-   if(!object)return;
-   const tools=object.querySelector('.notebook-tools');
-   tools.style.left=Math.min(0,surface.getBoundingClientRect().right-object.getBoundingClientRect().left-tools.offsetWidth)+'px';
- }
- window.addEventListener('resize',positionTools);
- elementPicker.addEventListener('change',()=>{
-   if(!elementPicker.value)return;
-   const object=liveObjects.get(items[Number(elementPicker.value)]);
-   if(!object)return;
-   choose('');
-   object.classList.add('is-picked');
-   positionTools();
-   object.focus({preventScroll:true});
-   object.scrollIntoView({block:'nearest',inline:'nearest'});
- });
  function select(item,object){
    selected=item;
-   elementPicker.value=String(items.indexOf(item));
-   surface.querySelectorAll('.notebook-object').forEach(el=>{
-     el.classList.toggle('is-selected',el===object);
-     if(el!==object)el.classList.remove('is-picked');
-   });
-   positionTools();
+   surface.querySelectorAll('.notebook-object').forEach(el=>el.classList.toggle('is-selected',el===object));
  }
  function renderObject(item,row){
      const slot=row!==surface&&(item.position||item.deleted);
      const artwork=document.createDocumentFragment();
      if(item.kind==='tape'){
-       const design=tapeDesigns.get(item.design);
-       if(design){
-         const image=document.createElement('img');
-         image.className='notebook-tape notebook-tape-image';
-         image.src=design.src;
-         image.alt='';
-         artwork.append(image);
-       }else{
-         const line=document.createElement('div');
-         line.className='notebook-tape';
-         line.setAttribute('aria-hidden','true');
-         line.style.setProperty('--tape-color',item.color||'#ab607c');
-         line.textContent=((item.motif||'✿')+' ').repeat(60);
-         artwork.append(line);
-       }
+       const line=document.createElement('div');
+       line.className='notebook-tape';
+       line.setAttribute('aria-hidden','true');
+       line.style.setProperty('--tape-color',item.color||'#ab607c');
+       line.textContent=((item.motif||'✿')+' ').repeat(60);
+       artwork.append(line);
      }else if(item.kind==='sticker'){
        const stickerImage=document.createElement('img');
        stickerImage.className='notebook-sticker-art';
@@ -2395,12 +2361,14 @@ window.addEventListener('pagehide',stop);updateLabel();
        object.setAttribute('aria-hidden','true');
        return;
      }
-     liveObjects.set(item,object);
      object.tabIndex=0;
      object.setAttribute('aria-label',labels[item.kind]);
      if(selected===item)object.classList.add('is-selected');
      if(item.position)moveTo(item,object,item.position,false);
      object.addEventListener('focusin',()=>select(item,object));
+     object.addEventListener('click',event=>{
+       if(!kind&&!event.target.closest('button,input'))select(item,object);
+     });
      object.addEventListener('contextmenu',event=>{
        if(!event.target.closest('textarea,input'))event.preventDefault();
      });
@@ -2415,8 +2383,32 @@ window.addEventListener('pagehide',stop);updateLabel();
        };
      }
      let gesture=null;
+     function resized(start,angle,dx,dy){
+       const full=surface.clientWidth;
+       const radians=angle*Math.PI/180,cos=Math.cos(radians),sin=Math.sin(radians);
+       const maxWidth=angle%360===0?100-start.x:100;
+       const minWidth=Math.min(maxWidth,(item.kind==='sticker'?28:72)/full*100);
+       const minHeight=item.kind==='tape'?22:item.kind==='frame'?(item.style&&item.style!=='classic'?72:56):28;
+       const localX=dx*cos+dy*sin,localY=-dx*sin+dy*cos;
+       const ratio=item.kind==='sticker'?stickerLibrary.get(item.sticker)?.ratio:null;
+       let width,height;
+       if(ratio){
+         const change=(localX+localY/ratio)/(1+1/(ratio*ratio));
+         width=clamp(start.width+change/full*100,minWidth,Math.min(maxWidth,600*ratio/full*100));
+         height=width*full/100/ratio;
+       }else{
+         width=clamp(start.width+localX/full*100,minWidth,maxWidth);
+         height=clamp(start.height+localY,minHeight,600);
+       }
+       const dw=(width-start.width)*full/100,dh=height-start.height;
+       return {
+         x:clamp(start.x+((cos-1)*dw-sin*dh)/2/full*100,0,Math.max(0,100-width)),
+         y:Math.max(0,start.y+(sin*dw+(cos-1)*dh)/2),
+         width,height
+       };
+     }
      function begin(event,action){
-       if(kind||moving||event.button!==0||gesture)return;
+       if(kind||event.button!==0||gesture)return;
        select(item,object);
        const box=object.getBoundingClientRect();
        gesture={id:event.pointerId,target:event.currentTarget,action,start:snapshot(),x:event.clientX,y:event.clientY,
@@ -2436,7 +2428,7 @@ window.addEventListener('pagehide',stop);updateLabel();
        gesture.changed=true;
        suppressClick=true;
        const full=surface.clientWidth;
-       const position={...start};
+       let position={...start};
        if(action==='move'){
          position.x=clamp(start.x+dx/full*100,0,Math.max(0,100-start.width));
          position.y=clamp(start.y+dy,0,Math.max(0,surface.clientHeight-30));
@@ -2444,17 +2436,9 @@ window.addEventListener('pagehide',stop);updateLabel();
          const delta=Math.atan2(event.clientY-cy,event.clientX-cx)-Math.atan2(y-cy,x-cx);
          item.angle=Math.round(angle+delta*180/Math.PI)%360;
        }else{
-         const radians=angle*Math.PI/180,cos=Math.cos(radians),sin=Math.sin(radians);
-         const minWidth=Math.min(100,(item.kind==='sticker'?28:72)/full*100);
-         position.width=clamp(start.width+(dx*cos+dy*sin)/full*100,minWidth,100);
-         const minHeight=item.kind==='tape'?22:item.kind==='frame'?(item.style&&item.style!=='classic'?72:56):28;
-         position.height=clamp(start.height-dx*sin+dy*cos,minHeight,600);
-         const dw=(position.width-start.width)*full/100,dh=position.height-start.height;
-         position.x=clamp(start.x+((cos-1)*dw-sin*dh)/2/full*100,0,100-position.width);
-         position.y=Math.max(0,start.y+(sin*dw+(cos-1)*dh)/2);
+         position=resized(start,angle,dx,dy);
        }
        moveTo(item,object,position);
-       positionTools();
        // Reparenting a legacy object can release pointer capture.
        if(!gesture.target.hasPointerCapture(event.pointerId))gesture.target.setPointerCapture(event.pointerId);
      });
@@ -2479,25 +2463,8 @@ window.addEventListener('pagehide',stop);updateLabel();
        parent.append(button);
        return button;
      }
-     const move=control('✥','Mover '+labels[item.kind].toLowerCase());
-     move.className='notebook-move';
-     move.addEventListener('pointerdown',event=>begin(event,'move'));
-     move.addEventListener('click',()=>{
-       choose('');
-       moving={item,object,position:snapshot()};
-       surface.classList.add('is-placing');
-       placement.textContent='Toca el cuaderno para mover el elemento.';
-       placement.hidden=false;
-     });
-     const rotate=control('↻','Girar '+labels[item.kind].toLowerCase());
-     rotate.className='notebook-rotate';
-     rotate.addEventListener('pointerdown',event=>begin(event,'rotate'));
-     rotate.addEventListener('click',()=>{
-       const position=snapshot();
-       item.angle=((item.angle||0)+15)%360;
-       moveTo(item,object,position);positionTools();save();
-     });
      const remove=control('×','Quitar '+labels[item.kind].toLowerCase());
+     remove.className='notebook-remove';
      remove.addEventListener('click',()=>{
        removed={item,index:items.indexOf(item)};
        if(item.at!==undefined)item.deleted=true;
@@ -2506,6 +2473,14 @@ window.addEventListener('pagehide',stop);updateLabel();
        undo.querySelector('[role=status]').textContent=labels[item.kind]+' · eliminado';
        undo.hidden=false;
        undo.querySelector('button').focus();
+     });
+     const rotate=control('↻','Girar '+labels[item.kind].toLowerCase());
+     rotate.className='notebook-rotate';
+     rotate.addEventListener('pointerdown',event=>begin(event,'rotate'));
+     rotate.addEventListener('click',()=>{
+       const position=snapshot();
+       item.angle=((item.angle||0)+15)%360;
+       moveTo(item,object,position);save();
      });
      if(item.kind==='frame'){
        const recolor=document.createElement('input');
@@ -2520,20 +2495,18 @@ window.addEventListener('pagehide',stop);updateLabel();
        toolbar.append(recolor);
      }
      object.append(toolbar);
-     const resize=control('⤡','Cambiar tamaño de '+labels[item.kind].toLowerCase(),object);
+     const resize=control('','Cambiar tamaño de '+labels[item.kind].toLowerCase(),object);
      resize.className='notebook-resize';
      resize.addEventListener('pointerdown',event=>begin(event,'resize'));
+     const arrows={ArrowLeft:[-8,0],ArrowRight:[8,0],ArrowUp:[0,-8],ArrowDown:[0,8]};
      resize.addEventListener('keydown',event=>{
-       if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key))return;
+       if(!Object.hasOwn(arrows,event.key))return;
        event.preventDefault();
-       const position={...snapshot()};
-       if(event.key==='ArrowLeft'||event.key==='ArrowRight'){
-         position.width=clamp(position.width+(event.key==='ArrowRight'?4:-4),12,100);
-         position.x=Math.min(position.x,100-position.width);
-       }else{
-         position.height=clamp(position.height+(event.key==='ArrowDown'?8:-8),28,600);
-       }
-       moveTo(item,object,position);positionTools();save();
+       const [dx,dy]=arrows[event.key];
+       const start=snapshot();
+       const angle=item.angle||0,radians=angle*Math.PI/180,cos=Math.cos(radians),sin=Math.sin(radians);
+       const position=resized(start,angle,dx*cos-dy*sin,dx*sin+dy*cos);
+       moveTo(item,object,position);save();
      });
  }
  function load(){
@@ -2544,42 +2517,36 @@ window.addEventListener('pagehide',stop);updateLabel();
    if(!original)return;
    try{items=JSON.parse(localStorage.getItem(key())||'[]');if(!Array.isArray(items))items=[];}catch{items=[];}
    items=items.filter(item=>item&&Object.hasOwn(labels,item.kind));
-   items.forEach(item=>{if(!item.position||item.at!==undefined)item.at=clamp(item.at??original.value.length,0,original.value.length);});
+   for(const item of items){
+     // Keep placements made with the earlier tape menu.
+     if(item.kind==='tape'&&stickerLibrary.has('cinta-'+item.design)){
+       item.kind='sticker';
+       item.sticker='cinta-'+item.design;
+       delete item.design;
+     }
+     if(!item.position||item.at!==undefined)item.at=clamp(item.at??original.value.length,0,original.value.length);
+   }
    render();
  }
  const options=decor.querySelector('[data-decor-options]');
  const placement=decor.querySelector('.notebook-placement');
- const frameStyle=decor.querySelector('[data-frame-style]');
- const stickerOptions=decor.querySelector('.notebook-sticker-options');
- const tapeOptions=decor.querySelector('.notebook-tape-options');
- let tapeStyle='';
- const tapeDesigns=new Map([
-   ['flores-rosas',{name:'Flores rosas',src:'./cinta-cuaderno-flores-rosas.png',ratio:466/214}],
-   ['cuadros-diagonal',{name:'Cuadros en diagonal',src:'./cinta-cuaderno-cuadros-diagonal.png',ratio:2000/1111}],
-   ['cuadros-flores',{name:'Cuadros con flores',src:'./cinta-cuaderno-cuadros-flores.png',ratio:2000/1111}]
- ]);
- for(const [id,design] of [['',{name:'Cinta de símbolos'}],...tapeDesigns]){
-   const button=document.createElement('button');
-   button.type='button';
-   button.dataset.tapeChoice=id;
-   button.setAttribute('aria-label',design.name);
-   button.setAttribute('aria-pressed',String(!id));
-   button.title=design.name;
-   if(design.src){
-     const image=document.createElement('img');
-     image.src=design.src;
-     image.alt='';
-     button.append(image);
-   }else button.textContent='✿';
-   tapeOptions.append(button);
- }
- tapeOptions.addEventListener('click',event=>{
-   const button=event.target.closest('[data-tape-choice]');
+ const frameStyles=decor.querySelector('.notebook-note-style');
+ let frameStyle='taped';
+ frameStyles.addEventListener('click',event=>{
+   const button=event.target.closest('[data-frame-style]');
    if(!button)return;
-   tapeStyle=button.dataset.tapeChoice;
-   tapeOptions.querySelectorAll('button').forEach(choice=>choice.setAttribute('aria-pressed',String(choice===button)));
-   updatePatternPicker();
+   frameStyle=button.dataset.frameStyle;
+   frameStyles.querySelectorAll('button').forEach(style=>style.setAttribute('aria-pressed',String(style===button)));
  });
+ decor.querySelector('input[type=color]').addEventListener('input',event=>{
+   frameStyles.style.setProperty('--sample-color',event.target.value);
+ });
+ const stickerOptions=decor.querySelector('.notebook-sticker-options');
+ const illustratedStickers=[
+   ['flores-rosas','Flores rosas',466/214],
+   ['cuadros-diagonal','Cuadros en diagonal',2000/1111],
+   ['cuadros-flores','Cuadros con flores',2000/1111]
+ ];
  let stickerStyle='calculadora';
  const stickerLibraryKey='carmen-pegatinas:'+location.pathname.replace(/index\.html$/,'');
  const stickerLibrary=new Map();
@@ -2639,6 +2606,9 @@ window.addEventListener('pagehide',stop);updateLabel();
    addSticker.before(button);
  }
  for(const [id,name] of stockStickers)addStickerChoice({id,name,src:'./pegatina-cuaderno-'+id+'.png'});
+ for(const [id,name,ratio] of illustratedStickers){
+   addStickerChoice({id:'cinta-'+id,name,src:'./cinta-cuaderno-'+id+'.png',ratio});
+ }
  try{
    const saved=JSON.parse(localStorage.getItem(stickerLibraryKey)||'[]');
    saved.forEach(addStickerChoice);
@@ -2685,16 +2655,12 @@ window.addEventListener('pagehide',stop);updateLabel();
  const kinds=[...decor.querySelectorAll('[data-kind]')];
  const symbols=[...decor.querySelectorAll('[data-symbol]')];
  const picker=decor.querySelector('.notebook-symbol-picker'),currentSymbol=picker.querySelector('[data-current-symbol]');
- function updatePatternPicker(){
-   picker.hidden=kind==='sticker'||(kind==='tape'&&!!tapeStyle);
-   decor.querySelector('input[type=color]').parentElement.hidden=picker.hidden;
- }
  function choose(next){
-   kind=next;moving=null;frameStyle.parentElement.hidden=kind!=='frame';options.hidden=!kind||kind==='text';placement.hidden=!kind;picker.open=false;
+   kind=next;frameStyles.hidden=kind!=='frame';options.hidden=!kind||kind==='text';placement.hidden=!kind;picker.open=false;
    surface.classList.toggle('is-placing',!!kind);
    stickerOptions.hidden=kind!=='sticker';
-   tapeOptions.hidden=kind!=='tape';
-   updatePatternPicker();
+   picker.hidden=kind==='sticker';
+   decor.querySelector('input[type=color]').parentElement.hidden=picker.hidden;
    placement.textContent=kind==='text'?'Toca el cuaderno donde quieras escribir.':'Toca el cuaderno donde quieras colocar el elemento.';
    kinds.forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.kind===kind)));
  }
@@ -2712,33 +2678,27 @@ window.addEventListener('pagehide',stop);updateLabel();
      event.preventDefault();event.stopImmediatePropagation();
      return;
    }
-   if((!kind&&!moving)||!original||!surface.contains(event.target)||event.detail===0)return;
+   if(!kind||!original||!surface.contains(event.target)||event.detail===0)return;
    event.preventDefault();event.stopImmediatePropagation();
    const bounds=surface.getBoundingClientRect();
    const width=surface.clientWidth;
    if(!width)return;
    const x=clamp((event.clientX-bounds.left)/width*100,0,100);
    const y=Math.max(0,event.clientY-bounds.top);
-   if(moving){
-     const {item,object,position}=moving;
-     choose('');
-     moveTo(item,object,{...position,x:clamp(x,0,100-position.width),y});
-     select(item,object);save();
-     return;
-   }
    const item={kind,text:'',motif,color:decor.querySelector('input[type=color]').value};
    let pixels=kind==='tape'?width*.46:kind==='sticker'?52:kind==='text'?220:300;
    let height=kind==='tape'?26:kind==='sticker'?52:kind==='text'?70:105;
-   if(kind==='frame'&&frameStyle.value!=='classic'){
-     item.style=frameStyle.value;
+   if(kind==='frame'&&frameStyle!=='classic'){
+     item.style=frameStyle;
      height=Math.min(255,Math.max(180,content.clientWidth*.29));
    }
-   if(kind==='sticker')item.sticker=stickerStyle;
-   pixels=Math.min(pixels,Math.max(100,width*(100-x)/100),width);
-   if(kind==='tape'&&tapeStyle){
-     item.design=tapeStyle;
-     height=Math.round(pixels/tapeDesigns.get(tapeStyle).ratio);
+   if(kind==='sticker'){
+     item.sticker=stickerStyle;
+     if(stickerLibrary.get(stickerStyle)?.ratio)pixels=146;
    }
+   pixels=Math.min(pixels,Math.max(100,width*(100-x)/100),width);
+   const ratio=kind==='sticker'?stickerLibrary.get(stickerStyle)?.ratio:null;
+   if(ratio)height=Math.round(pixels/ratio);
    item.position={x:Math.min(x,100-pixels/width*100),y,width:pixels/width*100,height};
    items.push(item);
    selected=item;
@@ -2750,13 +2710,12 @@ window.addEventListener('pagehide',stop);updateLabel();
  document.addEventListener('pointerdown',event=>{
    suppressClick=false;
    if(event.target.closest('.notebook-object,.notebook-decor'))return;
-   if(!content.contains(event.target)&&(kind||moving)){choose('');menu.open=false;}
+   if(!content.contains(event.target)&&kind){choose('');menu.open=false;}
    selected=null;
-   elementPicker.value='';
-   surface.querySelectorAll('.is-selected').forEach(el=>el.classList.remove('is-selected','is-picked'));
+   surface.querySelectorAll('.is-selected').forEach(el=>el.classList.remove('is-selected'));
  });
  document.addEventListener('keydown',event=>{
-   if(event.key==='Escape'&&(kind||moving)){
+   if(event.key==='Escape'&&kind){
      choose('');
      menu.querySelector('summary').focus();
    }
