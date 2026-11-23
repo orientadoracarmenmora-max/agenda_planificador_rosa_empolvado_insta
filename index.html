@@ -817,7 +817,45 @@ win.document.head.innerHTML='<title>Calendario y planificación</title><style>@p
 picker.onchange=async()=>{try{const file=picker.files[0];if(!file)return;const data=JSON.parse(await file.text());if(data.format!=='orientadora-carmen-mora-recursos-conectados'||data.version!==1)throw Error('Selecciona el archivo conjunto de calendario y planificador.');pf.contentWindow.plannerStore.validate(data.planner);window.diaryStore.validate(data.diary);const cal=data.calendar;if(!cal||!cal.months||!Number.isInteger(cal.selectedMonth)||cal.selectedMonth<0||cal.selectedMonth>11||!Number.isInteger(cal.selectedYear))throw Error('Calendario no válido');for(const [key,entries]of Object.entries(cal.months)){if(!/^carmen-recursos-conectados-v3-\d{4}-(?:[0-9]|1[01])$/.test(key))throw Error('Mes no válido');for(const [d,v]of Object.entries(entries))if(!/^(?:[1-9]|[12][0-9]|3[01])$/.test(d)||typeof v!=='string')throw Error('Anotación no válida')}
 pf.contentWindow.plannerStore.restore(data.planner);const w=cf.contentWindow;w.document.getElementById('month').value=cal.selectedMonth;w.document.getElementById('year').value=cal.selectedYear;w.calendarStore.replaceAll(cal.months);w.postMessage({type:'request-calendar-state'},'*');window.diaryStore.restore(data.diary);status.textContent='Calendario, planificación y diario recuperados.';
 }catch(e){status.textContent='No se ha podido cargar: '+e.message}finally{picker.value=''}};
+const landscapePhone=matchMedia('(orientation: landscape) and (max-height: 560px) and (pointer: coarse)');
+function syncCalendarOrientation(){
+  document.documentElement.classList.toggle('calendar-phone-landscape',landscapePhone.matches);
+  cf.contentDocument?.documentElement?.classList.toggle('calendar-phone-landscape',landscapePhone.matches);
+}
+landscapePhone.addEventListener('change',syncCalendarOrientation);
+cf.addEventListener('load',syncCalendarOrientation);
+syncCalendarOrientation();
+
 function install(frame,isCalendar){const d=frame.contentDocument;if(!d||d.__connectedActions)return;d.__connectedActions=true;
+if(isCalendar){
+  const landscape=d.createElement('style');
+  landscape.textContent=`@media screen {
+    html.calendar-phone-landscape body{min-height:0!important;overflow:hidden!important}
+    .calendar-phone-landscape .calendar-resource{height:auto!important;overflow:visible!important}
+    .calendar-phone-landscape .calendar-resource .deck{position:relative!important;left:auto;top:auto!important;width:auto!important;height:auto!important;transform:none!important;margin:8px}
+    .calendar-phone-landscape .calendar-resource .deck>.monthly{position:relative!important;display:grid!important;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:5px;width:100%!important;height:auto!important;padding:9px 12px 12px!important}
+    .calendar-phone-landscape .monthly .eyebrow,.calendar-phone-landscape .monthly .month-heading h2{display:none}
+    .calendar-phone-landscape .monthly .month-heading{display:contents}
+    .calendar-phone-landscape .monthly .month-controls{grid-area:1/2;padding:3px 6px}
+    .calendar-phone-landscape .monthly .month-controls label{display:inline-flex;align-items:center;gap:4px;font-size:12px}
+    .calendar-phone-landscape .monthly .month-controls select{min-height:30px;font-size:13px}
+    .calendar-phone-landscape .monthly .month-title-row{grid-area:1/1;justify-content:flex-start;margin:0!important;gap:8px;transform:none!important}
+    .calendar-phone-landscape .monthly #calendar-name{font-size:clamp(22px,4vw,38px)!important;padding:0;margin:0;white-space:nowrap}
+    .calendar-phone-landscape .monthly .month-rays{display:none}
+    .calendar-phone-landscape .monthly .lead{grid-column:1/-1;margin:0}
+    .calendar-phone-landscape .monthly .event-toolbar{grid-column:1/-1;flex-wrap:wrap;justify-content:flex-start!important;gap:5px;margin:0!important;min-height:0!important}
+    .calendar-phone-landscape .monthly .event-toolbar .event-label{font-size:12px!important;padding:4px 7px!important}
+    .calendar-phone-landscape .monthly .week-head,.calendar-phone-landscape .monthly #month-grid{grid-column:1/-1;gap:4px}
+    .calendar-phone-landscape .monthly #month-grid{grid-template-rows:repeat(6,minmax(47px,auto));margin-top:0}
+    .calendar-phone-landscape .monthly .week-head span{font-size:12px;padding:4px}
+    .calendar-phone-landscape .monthly .day-cell>b{left:4px;top:4px;font-size:13px!important;line-height:17px;height:20px;min-width:20px}
+    .calendar-phone-landscape .monthly .day-cell textarea{padding:5px 4px!important;text-indent:21px;font-size:13px!important;line-height:18px!important}
+    .calendar-phone-landscape .monthly .month-bottom{grid-column:1/-1;min-height:25px!important;padding:5px 0!important}
+    .calendar-phone-landscape .monthly .calendar-credit{font-size:12px!important}
+  }`;
+  d.head.append(landscape);
+  syncCalendarOrientation();
+}
 for(const b of d.querySelectorAll(isCalendar?'button':'#planner button')){let k='';if(isCalendar)k=({'save-calendar':'save','load-calendar':'load','save-pdf':'pdf','print-month':'print'})[b.id]||'';else{const text=b.textContent.trim();if(/^Guardar planificación/i.test(text))k='save';else if(/^Cargar planificación/i.test(text))k='load';else if(/^Guardar PDF/i.test(text))k='pdf';else if(/^Imprimir/i.test(text))k='print'}if(k)b.style.display='none'}
 }
 document.querySelector('.agenda-toolbar').addEventListener('click',event=>{
@@ -934,6 +972,12 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
 .agenda-toolbar #agenda-install{width:auto;padding:0 8px!important;background:#eee9e5;border-color:#ded4cd;color:#6b5748}
 .agenda-toolbar #agenda-install[aria-expanded="true"],.agenda-toolbar .diary-search-toggle[aria-expanded="true"]{outline:2px solid #9a7780}
 #agenda-install-help-slot:not(:empty) span:not([hidden]){display:block;padding:6px 12px;color:#795e56;font:12px system-ui}
+@media screen{
+  .calendar-phone-landscape #calendar{min-height:0!important}
+  .calendar-phone-landscape body:has(#panel-calendar:not([hidden])) .switcher{padding:4px 8px!important}
+  .calendar-phone-landscape body:has(#panel-calendar:not([hidden])) .switcher button{font-size:19px!important;padding:4px 10px!important;min-height:32px!important}
+  .calendar-phone-landscape body:has(#panel-calendar:not([hidden])) .agenda-toolbar{padding-block:3px}
+}
 .resource-status:empty{display:none}
 @media(max-width:340px){.agenda-toolbar button,.agenda-toolbar summary{width:32px;height:32px}.agenda-toolbar,.agenda-tools-left{gap:3px}.agenda-toolbar .top-resource-actions{gap:3px!important}.agenda-toolbar #agenda-install{padding-inline:5px!important}}
 @media print{.agenda-toolbar,#agenda-install-help-slot,#diary-search-panel{display:none!important}}
