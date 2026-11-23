@@ -12,6 +12,22 @@ function currentDate(){
 async function init(){if(!window.plannerStore||!window.diaryStore||!calendar()?.calendarStore){setTimeout(init,100);return}try{db=await new Promise((resolve,reject)=>{const r=indexedDB.open('carmen-agenda:'+scope,1);r.onupgradeneeded=()=>r.result.createObjectStore('state');r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});const stored=await new Promise((resolve,reject)=>{const r=db.transaction('state').objectStore('state').get('workspace');r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});let value;try{value=JSON.parse(localStorage.getItem(key))||stored}catch{value=stored}if(value){plannerStore.validate(value.planner);diaryStore.validate(value.diary);const w=calendar();w.calendarStore.replaceAll(value.calendar.months);plannerStore.restore(value.planner);diaryStore.restore({...value.diary,date:currentDate()})}plannerStore.focusDate(currentDate());ready=true;label.textContent='Guardado en este dispositivo';await save();setInterval(save,1200);document.addEventListener('visibilitychange',()=>{if(document.hidden)save()});window.addEventListener('pagehide',()=>{if(ready)try{localStorage.setItem(key,JSON.stringify(snapshot()))}catch{}})}catch(e){label.textContent='Usa Guardar para conservar una copia';console.error(e)}}
 const installButton=bar.querySelector('#agenda-install');
 const installHelp=bar.querySelector('#agenda-install-help');
+const diaryPanel=document.getElementById('panel-diary');
+const diaryActions=diaryPanel?.querySelector('.diary-toolbar .top-resource-actions');
+const diaryHelp=diaryPanel?.querySelector('#diary-install-help-slot');
+if(diaryActions&&diaryHelp){
+  function placeInstall(){
+    if(diaryPanel.hidden){
+      bar.insertBefore(installButton,bar.querySelector('#agenda-update'));
+      installButton.after(installHelp);
+    }else{
+      diaryActions.prepend(installButton);
+      diaryHelp.append(installHelp);
+    }
+  }
+  new MutationObserver(placeInstall).observe(diaryPanel,{attributes:true,attributeFilter:['hidden']});
+  placeInstall();
+}
 const standalone=matchMedia('(display-mode: standalone)');
 let installed=standalone.matches||navigator.standalone===true;
 function setInstallHelp(message){
