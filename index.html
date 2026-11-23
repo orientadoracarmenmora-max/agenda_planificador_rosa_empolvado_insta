@@ -2131,7 +2131,7 @@ window.addEventListener('pagehide',stop);updateLabel();
 #notes-section .notebook-object:has(.notebook-frame-paper){margin-block:8px}
 #carmen-diary #notes-section .notebook-frame-wrap.is-plain .notebook-frame{border:0;border-radius:7px;background:color-mix(in srgb,var(--frame-color) 10%,white)}
 #notes-section #free-note::placeholder{color:transparent}
-#notes-section .notebook-object.is-text:not(:focus-within) .notebook-text-box{cursor:grab;touch-action:none}
+#notes-section .notebook-object:not(:focus-within) :is(.notebook-text-box,.notebook-frame){cursor:grab;touch-action:none}
 #notes-section .notebook-frame-paper{
  --paper-pink:color-mix(in srgb,var(--frame-color) 38%,#fff7f6);
  --paper-wash:color-mix(in srgb,var(--frame-color) 18%,transparent);
@@ -2174,6 +2174,7 @@ window.addEventListener('pagehide',stop);updateLabel();
 #notes-section .notebook-tools button,#notes-section .notebook-tools input{position:absolute;top:0;width:36px;height:36px;padding:0;font-size:22px;touch-action:manipulation;pointer-events:auto}
 #notes-section .notebook-tools .notebook-remove{left:-3px}
 #notes-section .notebook-tools .notebook-rotate{right:-3px;touch-action:none}
+#notes-section .notebook-rotate span{display:inline-block;transform:rotate(-25deg)}
 #notes-section .notebook-tools input{left:50%;transform:translateX(-50%);width:28px;border:1px solid #dbc9c7;border-radius:7px;background:#fff}
 #carmen-diary #notes-section .notebook-object .notebook-resize{display:none;position:absolute;z-index:1;right:0;bottom:0;transform:translate(55%,55%);width:36px;height:36px;min-height:0;padding:0;border:0;border-radius:50%;background:transparent;touch-action:none;cursor:nwse-resize}
 #carmen-diary #notes-section .notebook-object.is-selected .notebook-resize{display:grid;place-items:center}
@@ -2253,9 +2254,11 @@ window.addEventListener('pagehide',stop);updateLabel();
    return {row,occupied:value?occupied:0};
  }
  function layoutCanvas(){
-   const bottom=items.reduce((extent,item)=>item.position&&!item.position.region&&!item.deleted
-     ? Math.max(extent,item.position.y+item.position.height+(item.style&&item.style!=='classic'?30:0)+16)
-     : extent,0);
+   const canvasTop=surface.getBoundingClientRect().top;
+   let bottom=0;
+   for(const object of surface.querySelectorAll('.notebook-object.is-floating')){
+     bottom=Math.max(bottom,Math.ceil(object.getBoundingClientRect().bottom-canvasTop)+16);
+   }
    surface.style.minHeight=bottom?bottom+'px':'';
  }
  function planningOffset(){
@@ -2271,6 +2274,25 @@ window.addEventListener('pagehide',stop);updateLabel();
    object.style.width=position.width+'%';
    object.style.rotate=(item.angle||0)+'deg';
    object.style.setProperty('--object-height',position.height+'px');
+   if(item.kind!=='sticker'&&item.kind!=='frame')return position;
+   object.style.scale='';
+   const canvas=surface.getBoundingClientRect(),page=paper.getBoundingClientRect();
+   let box=object.getBoundingClientRect();
+   if(!canvas.width||!page.width)return position;
+   const edge=2,maxWidth=page.width-edge*2;
+   if(maxWidth>0&&box.width>maxWidth){
+     object.style.scale=maxWidth/box.width;
+     box=object.getBoundingClientRect();
+   }
+   const inside=Math.min(16,box.width/2);
+   const minShift=Math.max(page.left+edge-box.left,canvas.left+inside-box.right);
+   const maxShift=Math.min(page.right-edge-box.right,canvas.right-inside-box.left);
+   const dx=clamp(0,minShift,Math.max(minShift,maxShift));
+   const dy=Math.max(0,page.top+edge-box.top);
+   const adjusted={...position,x:position.x+dx/canvas.width*100,y:position.y+dy};
+   object.style.left=adjusted.x+'%';
+   object.style.top=adjusted.y+'px';
+   return adjusted;
  }
  function moveTo(item,object,position,updateCanvas=true){
    if(!item.position){
@@ -2282,6 +2304,9 @@ window.addEventListener('pagehide',stop);updateLabel();
      object.replaceWith(slot);
      surface.append(object);
    }
+   object.classList.add('is-floating');
+   floatingItems.set(object,item);
+   position=paintPosition(item,object,position);
    const {region,...next}=position;
    if(item.kind==='sticker'&&planning){
      const top=planningOffset(),center=position.y+position.height/2;
@@ -2291,29 +2316,28 @@ window.addEventListener('pagehide',stop);updateLabel();
      }
    }
    item.position=next;
-   object.classList.add('is-floating');
-   floatingItems.set(object,item);
-   paintPosition(item,object,position);
    if(updateCanvas)layoutCanvas();
  }
- function stickerLimits(width){
+ function decorationLimits(kind,width){
+   if(kind!=='sticker'&&kind!=='frame')return {left:0,right:100,top:0};
    const bounds=surface.getBoundingClientRect(),page=paper.getBoundingClientRect();
    const bleed=28;
    return {
      left:Math.max(-bleed,page.left-bounds.left)/width*100,
      right:100+Math.min(bleed,page.right-bounds.right)/width*100,
-     top:planning?Math.max(page.top-bounds.top,planningOffset()-16):-16
+     top:kind==='sticker'&&planning?Math.max(page.top-bounds.top,planningOffset()-16):0
    };
  }
  if(planning&&typeof ResizeObserver==='function'){
-   const alignStickers=new ResizeObserver(()=>{
-     for(const object of surface.querySelectorAll('.notebook-object.is-sticker.is-floating')){
+   const alignDecorations=new ResizeObserver(()=>{
+     for(const object of surface.querySelectorAll('.notebook-object.is-floating:is(.is-sticker,.is-frame)')){
        const item=floatingItems.get(object);
-       if(item?.position?.region==='planning')paintPosition(item,object,canvasPosition(item.position));
+       if(item?.position)paintPosition(item,object,canvasPosition(item.position));
      }
+     layoutCanvas();
    });
-   alignStickers.observe(planning);
-   alignStickers.observe(surface);
+   alignDecorations.observe(planning);
+   alignDecorations.observe(surface);
  }
  function render(){
    if(!original)return;
@@ -2471,7 +2495,7 @@ window.addEventListener('pagehide',stop);updateLabel();
      object.addEventListener('click',event=>{
        if(!kind&&!event.target.closest('button,input')){
          select(item,object);
-         if(item.kind==='text'&&event.target===object.querySelector('textarea'))event.target.focus({preventScroll:true});
+         if(event.target.matches('textarea'))event.target.focus({preventScroll:true});
        }
      });
      object.addEventListener('contextmenu',event=>{
@@ -2491,7 +2515,7 @@ window.addEventListener('pagehide',stop);updateLabel();
      function resized(start,angle,dx,dy){
        const full=surface.clientWidth;
        const radians=angle*Math.PI/180,cos=Math.cos(radians),sin=Math.sin(radians);
-       const limit=item.kind==='sticker'?stickerLimits(full):{left:0,right:100,top:0};
+       const limit=decorationLimits(item.kind,full);
        const maxWidth=angle%360===0?limit.right-start.x:100;
        const minWidth=Math.min(maxWidth,(item.kind==='sticker'?28:72)/full*100);
        const minHeight=item.kind==='tape'?22:item.kind==='frame'?(item.style&&item.style!=='classic'?72:56):28;
@@ -2525,7 +2549,7 @@ window.addEventListener('pagehide',stop);updateLabel();
      object.addEventListener('pointerdown',event=>{
        if(event.target.closest('button,input'))return;
        const editor=event.target.closest('textarea');
-       if(editor&&(item.kind!=='text'||editor===document.activeElement))return;
+       if(editor===document.activeElement)return;
        begin(event,'move');
      });
      object.addEventListener('pointermove',event=>{
@@ -2538,7 +2562,7 @@ window.addEventListener('pagehide',stop);updateLabel();
        const full=surface.clientWidth;
        let position={...start};
        if(action==='move'){
-         const limit=item.kind==='sticker'?stickerLimits(full):{left:0,right:100,top:0};
+         const limit=decorationLimits(item.kind,full);
          position.x=clamp(start.x+dx/full*100,limit.left,Math.max(limit.left,limit.right-start.width));
          position.y=clamp(start.y+dy,limit.top,Math.max(0,surface.clientHeight-30));
        }else if(action==='rotate'){
@@ -2584,8 +2608,12 @@ window.addEventListener('pagehide',stop);updateLabel();
        undo.hidden=false;
        undo.querySelector('button').focus();
      });
-     const rotate=control('↻','Girar '+labels[item.kind].toLowerCase());
+     const rotate=control('','Girar '+labels[item.kind].toLowerCase());
      rotate.className='notebook-rotate';
+     const rotateIcon=document.createElement('span');
+     rotateIcon.textContent='↻';
+     rotateIcon.setAttribute('aria-hidden','true');
+     rotate.append(rotateIcon);
      rotate.addEventListener('pointerdown',event=>begin(event,'rotate'));
      rotate.addEventListener('click',()=>{
        const position=snapshot();
@@ -2796,7 +2824,7 @@ window.addEventListener('pagehide',stop);updateLabel();
    const bounds=surface.getBoundingClientRect(),width=surface.clientWidth;
    if(!width)return;
    const text=type==='text',inset=text?10:0;
-   const limit=type==='sticker'?stickerLimits(width):{left:0,right:100,top:0};
+   const limit=type==='sticker'?decorationLimits(type,width):{left:0,right:100,top:0};
    const rawX=(event.clientX-bounds.left-inset)/width*100;
    const x=clamp(rawX,limit.left,limit.right);
    const y=Math.max(limit.top,event.clientY-bounds.top-inset);
