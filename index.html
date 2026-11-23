@@ -1043,10 +1043,19 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
     .hl-row{column-gap:18px}
     #carmen-diary .sheethead.today-tools{justify-content:flex-start;gap:12px;flex-wrap:wrap}
     #carmen-diary .today-tools .marks{order:-1;margin:0}
-    #carmen-diary .day-markup-tools{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:0 20px 13px}
+    #carmen-diary .day-markup-tools{position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:0 20px 13px}
     #carmen-diary .day-markup-tools .hl-panel{top:auto;bottom:calc(100% + 5px)}
     #carmen-diary .day-markup-tools .hl-tools button{min-height:34px}
-    #carmen-diary .day-markup-tools .hl-eraser svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+    #carmen-diary .day-markup-tools .hl-tools button[hidden]{display:none}
+    #carmen-diary .day-markup-tools .hl-round svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+    #carmen-diary .day-markup-tools .hl-color{background:#fefcf9;color:#78534e}
+    #carmen-diary .day-markup-tools .hl-color.hl-on{background:#fff1c1}
+    #carmen-diary .notebook-writing-tools{display:flex;gap:4px;align-items:center}
+    #carmen-diary .day-markup-tools :is(.notebook-write,.notebook-alignment button){min-width:34px;height:34px;border:1px solid #d7c2bd;border-radius:8px;background:#fefcf9;color:#78534e;cursor:pointer}
+    #carmen-diary .day-markup-tools :is(.notebook-write,.notebook-alignment button)[aria-pressed=true]{background:#eed9df}
+    #carmen-diary .notebook-alignment:not([hidden]){position:absolute;bottom:100%;left:20px;z-index:16;display:flex;gap:3px}
+    #carmen-diary .notebook-alignment svg{display:block;width:16px;margin:auto;stroke:currentColor;stroke-width:1.6}
+    @media print{#carmen-diary .day-markup-tools{display:none}}
     #carmen-diary .day-markup-tools .sticker-tools{margin:0}
     #carmen-diary .day-markup-tools .sticker-command{font:600 12px system-ui;padding:4px 8px;border:1px solid #d7c2bd;border-radius:8px;background:#fefcf9;color:#78534e;cursor:pointer}
     .hl-row>.completion-tools,.hl-row>.marks,#app [data-template-id="weekly-summary-panel"] .hl-row>.completion-tools{margin:0!important}
@@ -1113,8 +1122,17 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
     const widthButton = button('Elegir grosor del subrayador', '', 'hl-round');
     const sample = create(doc, 'span', 'hl-sample');
     widthButton.append(sample);
-    const eraserButton = daily ? button('Goma de subrayado', '', 'hl-round hl-eraser') : null;
+    const pencilButton = daily ? button('Lápiz', '', 'hl-round hl-pencil') : null;
+    const pencilPanel = daily ? create(doc, 'div', 'hl-panel hl-palette') : null;
+    const eraserButton = daily ? button('Goma', '', 'hl-round hl-eraser') : null;
     if (eraserButton) eraserButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 13 8-8a2 2 0 0 1 3 0l4 4a2 2 0 0 1 0 3l-7 7H8l-4-4a1.4 1.4 0 0 1 0-2Z"/><path d="m8 9 8 8M12 19h8"/></svg>';
+    if (daily) {
+      const icon = path => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="'+path+'"/></svg>';
+      colorButton.innerHTML = icon('m5 13 9-9 5 5-9 9H5zM10 9l5 5M4 21h16');
+      pencilButton.innerHTML = icon('m4 20 1-5L16 4l4 4L9 19zM13 7l4 4');
+      widthButton.hidden = true;
+      bar.append(pencilButton, pencilPanel);
+    }
     const undoButton = daily ? null : button('Deshacer última marca', '↶', 'hl-undo');
     const offButton = daily ? null : button('Salir del subrayado', '×', 'hl-off');
     const palette = create(doc, 'div', 'hl-panel hl-palette');
@@ -1139,7 +1157,8 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
       slider.setAttribute('aria-valuetext', slider.value + ' %');
       renderControls();
     };
-    let active = false, erasing = false;
+    let active = false, erasing = false, pencil = false;
+    let pencilColor = '#61463f';
     let selectedDate;
     let layers = new Map();
     let drawing = null;
@@ -1148,6 +1167,10 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
       for (const [control, options] of [[colorButton, palette], [widthButton, widthPanel]]) {
         options.hidden = options !== panel;
         control.setAttribute('aria-expanded', String(options === panel));
+      }
+      if (pencilPanel) {
+        pencilPanel.hidden = pencilPanel !== panel;
+        pencilButton.setAttribute('aria-expanded', String(pencilPanel === panel));
       }
       if (panel) {
         panel.style.removeProperty('--hl-panel-left');
@@ -1161,19 +1184,21 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
       layer.classList.toggle('hl-erasing', erasing);
     }
 
-    function setActive(value, erase = false) {
+    function setActive(value, erase = false, draw = false) {
       active = value;
       erasing = value && erase;
+      pencil = value && draw;
+      pencilButton?.setAttribute('aria-pressed', String(pencil));
       if (offButton) offButton.disabled = !value;
       if (eraserButton) eraserButton.setAttribute('aria-pressed', String(erasing));
-      colorButton.classList.toggle('hl-on', active && !erasing);
-      if (daily) colorButton.setAttribute('aria-pressed', String(active && !erasing));
+      colorButton.classList.toggle('hl-on', active && !erasing && !pencil);
+      if (daily) colorButton.setAttribute('aria-pressed', String(active && !erasing && !pencil));
       for (const layer of layers.values()) updateLayerMode(layer);
     }
 
     function renderControls() {
       colorButton.style.setProperty('--hl-color', color[1]);
-      colorButton.setAttribute('aria-label', 'Color del subrayador: ' + color[0]);
+      colorButton.setAttribute('aria-label', daily ? 'Subrayador' : 'Color del subrayador: ' + color[0]);
       widthButton.setAttribute('aria-label', 'Grosor del subrayador: ' + width[0]);
       sample.style.setProperty('--hl-line', width[2] + 'px');
       preview.style.setProperty('--hl-color', color[1]);
@@ -1196,7 +1221,7 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
       btn.onclick = () => { width = item; renderControls(); setPanel(null); widthButton.focus(); };
     }
     colorButton.onclick = () => {
-      if (daily && active && !erasing) { setPanel(null); setActive(false); return; }
+      if (daily && active && !erasing && !pencil) { setPanel(null); setActive(false); return; }
       if (!palette.hidden && !daily) { setPanel(null); return; }
       update();
       setActive(true);
@@ -1209,6 +1234,35 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
       update();
       setActive(!erasing, true);
     };
+
+    if (daily) {
+      for (const [label, hex] of [['Rojo', '#b23545'], ['Marrón', '#61463f'], ['Azul', '#315684'], ['Verde', '#39734b'], ['Negro', '#222222']]) {
+        const choice = button(label, '', 'hl-dot', pencilPanel);
+        choice.style.setProperty('--hl-color', hex);
+        choice.dataset.color = hex;
+        choice.setAttribute('aria-pressed', String(hex === pencilColor));
+        choice.onclick = () => {
+          pencilColor = hex;
+          for (const option of pencilPanel.children) {
+            option.setAttribute('aria-pressed', String(option === choice));
+          }
+          setPanel(null);
+        };
+      }
+      pencilButton.onclick = () => {
+        const enable = !pencil;
+        update();
+        setActive(enable, false, enable);
+        setPanel(enable ? pencilPanel : null);
+      };
+      placement.addEventListener('notebook-writing', () => {
+        setActive(false);
+        setPanel(null);
+      });
+      bar.addEventListener('click', () => {
+        if (active) placement.dispatchEvent(new Event('notebook-inking'));
+      });
+    }
 
     function save() {
       try { localStorage.setItem(storeKey, JSON.stringify(saved)); } catch {}
@@ -1350,15 +1404,16 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
           eraseAt(event, layer);
           return;
         }
-        const anchor = daily ? findAnchor(layer,event.clientX,event.clientY) : null;
-        const mark = {color:color[1],intensity,width:width[1],points:[points(event, layer, anchor)],order:++order};
+        const anchor = daily && !pencil ? findAnchor(layer,event.clientX,event.clientY) : null;
+        const mark = {color:pencil ? pencilColor : color[1],intensity:pencil ? 1 : intensity,width:pencil ? 2 : width[1],points:[points(event, layer, anchor)],order:++order};
+        if (pencil) mark.tool = 'pencil';
         if (anchor) mark.anchor = anchor.dataset.notebookId;
-        drawing = {layer,anchor,mark,line:trace(layer,mark),pointer:event.pointerId};
+        drawing = {layer,anchor,mark,pencil,line:trace(layer,mark),pointer:event.pointerId};
       };
       layer.onpointermove = event => {
         if (drawing?.layer !== layer || drawing.pointer !== event.pointerId) return;
         if (drawing.erase) { eraseAt(event, layer); return; }
-        if (daily && !drawing.anchor) {
+        if (daily && !drawing.pencil && !drawing.anchor) {
           const anchor=findAnchor(layer,event.clientX,event.clientY);
           if(anchor){
             attachMark(layer,drawing.mark,anchor);
@@ -1428,7 +1483,7 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
         let changed=false;
         for(const line of layer.children){
           const mark=lineMarks.get(line);
-          if(!mark||mark.anchor)continue;
+          if(!mark||mark.anchor||mark.tool==='pencil')continue;
           const hits=screenPoints(layer,mark).map(([x,y])=>findAnchor(layer,x,y));
           const visible=hits.filter(Boolean);
           if(visible.length<2||visible.length<hits.length/2||visible.some(hit=>hit!==anchor))continue;
@@ -1549,10 +1604,9 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
     remove.textContent = 'Quitar';
     remove.setAttribute('aria-label', 'Quitar pegatina seleccionada');
     remove.disabled = true;
-    tools.append(label, add, remove, picker, status);
+    if (name !== 'dia') tools.append(label, add, picker);
+    tools.append(remove, status);
     if (name === 'dia') {
-      label.hidden = true;
-      add.hidden = true;
       tools.hidden = true;
     }
 
@@ -1736,7 +1790,6 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
  * Agenda y planificador — Orientadora Carmen Mora
  * © 2026 Carmen Martínez Mora
  * Condiciones de uso: LICENSE.txt
- * Las fuentes personales se cargan exclusivamente en el navegador del usuario.
  */
 (() => {
   'use strict';
@@ -1752,7 +1805,6 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
     patrick: '"Patrick Hand", cursive',
     barlow: '"Barlow Condensed", sans-serif'
   };
-  const deviceKey = 'personal';
   const style = document.createElement('style');
   style.id = 'mejoras-carmen-estilo';
   style.textContent = `
@@ -1829,34 +1881,6 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
   ensureFreeNote();
 
 
-  // Guardado local de una fuente personal: IndexedDB, sin solicitudes al servidor.
-  function dbOpen(){
-    return new Promise((resolve,reject)=>{
-      if(!('indexedDB' in window)){reject(new Error('Sin almacenamiento local'));return}
-      const req=indexedDB.open('agenda-carmen-fuentes-privadas',1);
-      req.onupgradeneeded=()=>req.result.createObjectStore('files');
-      req.onsuccess=()=>resolve(req.result);
-      req.onerror=()=>reject(req.error);
-    });
-  }
-  async function dbPut(blob,name,key){
-    const db=await dbOpen();
-    await new Promise((resolve,reject)=>{
-      const tx=db.transaction('files','readwrite');
-      tx.objectStore('files').put({blob,name},key);
-      tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);
-    });
-    db.close();
-  }
-  async function dbGet(key){
-    const db=await dbOpen();
-    const result=await new Promise((resolve,reject)=>{
-      const tx=db.transaction('files','readonly');
-      const req=tx.objectStore('files').get(key);
-      req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);
-    });
-    db.close();return result;
-  }
   function applyGeneralFont(font){
     const enabled=!!font;
     document.body.classList.toggle('agenda-fuente-personalizada',enabled);
@@ -1875,7 +1899,7 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
       }catch{}
     }
   }
-  function createFontControl({target,id,label,ariaLabel,originalLabel,fontKey,fileKey,faceName,applyFont}){
+  function createFontControl({target,id,label,ariaLabel,originalLabel,fontKey,applyFont}){
     const wrap = document.createElement('div');
     wrap.className = 'font-control';
     wrap.innerHTML = `<label for="${id}">${label}</label>
@@ -1888,90 +1912,20 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
           <option value="quicksand">Quicksand</option>
           <option value="patrick">Patrick Hand</option><option value="barlow">Barlow Condensed</option>
         </optgroup>
-        <optgroup label="Fuentes del dispositivo" data-local-fonts></optgroup>
-        <option value="detect">Detectar fuentes del dispositivo…</option>
-        <option value="upload">Cargar mi fuente…</option>
       </select>`;
     target.prepend(wrap);
     const select=wrap.querySelector('select');
-    const group=wrap.querySelector('[data-local-fonts]');
-    if(id==='agenda-font-select')group.id='agenda-local-fonts';
-    const input=document.createElement('input');
-    input.type='file'; input.accept='.ttf,.otf,.woff,.woff2,font/ttf,font/otf,font/woff,font/woff2';
-    input.hidden=true; input.setAttribute('aria-label','Cargar una fuente desde el dispositivo');
-    wrap.appendChild(input);
-
-    let localLoaded=false;
-    async function loadPersonal(blob){
-      const bytes=await blob.arrayBuffer();
-      const face=new FontFace(faceName,bytes);
-      await face.load();
-      document.fonts.add(face);
-      localLoaded=true;
-    }
-    function addOption(id,name){
-      let opt=[...group.children].find(x=>x.value===id);
-      if(!opt){opt=document.createElement('option');opt.value=id;group.append(opt)}
-      opt.textContent=name;
-    }
     let current='original';
     function setFont(id){
-      const font=id===deviceKey?`"${faceName}",sans-serif`:id.startsWith('system:')
-        ?`"${id.slice(7).replace(/["\\]/g,'')}",sans-serif`:fontFamilies[id];
-      if(!font && id!=='original')return;
-      current=id;
-      applyFont(font);
-      select.value=id;
-      try{localStorage.setItem(fontKey,id)}catch{}
+      current=Object.hasOwn(fontFamilies,id)?id:'original';
+      applyFont(fontFamilies[current]);
+      select.value=current;
     }
-    async function detectFonts(interactive=true){
-      if(typeof window.queryLocalFonts!=='function'){
-        if(interactive)alert('Este navegador no permite enumerar las fuentes. Usa «Cargar mi fuente…».');
-        return;
-      }
-      try{
-        const found=await window.queryLocalFonts();
-        const names=[...new Set(found.map(f=>f.family).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'));
-        if(!names.length){if(interactive)alert('No se han encontrado fuentes disponibles.');return}
-        names.forEach(name=>addOption('system:'+name,name));
-        select.value=current;
-      }catch{if(interactive)alert('No se ha autorizado consultar las fuentes del dispositivo. Puedes cargar una fuente manualmente.')}
-    }
-    if(typeof window.queryLocalFonts==='function'&&navigator.permissions){
-      navigator.permissions.query({name:'local-fonts'}).then(permission=>{
-        if(permission.state==='granted')detectFonts(false);
-      }).catch(()=>{});
-    }
-    select.addEventListener('change',async()=>{
-      const id=select.value;
-      if(id==='detect'){await detectFonts();select.value=current;return}
-      if(id==='upload'){input.click();select.value=current;return}
-      if(id===deviceKey && !localLoaded){alert('Vuelve a cargar tu fuente personal.');select.value=current;return}
-      setFont(id);
+    select.addEventListener('change',()=>{
+      setFont(select.value);
+      try{localStorage.setItem(fontKey,current)}catch{}
     });
-    input.addEventListener('change',async()=>{
-      const file=input.files?.[0];
-      if(!file)return;
-      if(!/\.(ttf|otf|woff2?)$/i.test(file.name)){alert('Selecciona un archivo TTF, OTF, WOFF o WOFF2.');return}
-      try{
-        await loadPersonal(file);
-        addOption(deviceKey,'Mi fuente: '+file.name.replace(/\.(ttf|otf|woff2?)$/i,''));
-        try{await dbPut(file,file.name,fileKey)}catch{ /* Puede funcionar sin guardado persistente */ }
-        setFont(deviceKey);
-      }catch{alert('No se pudo cargar esta fuente. Prueba con un archivo TTF u OTF.')}
-      input.value='';
-    });
-    const saved=(()=>{try{return localStorage.getItem(fontKey)||'original'}catch{return 'original'}})();
-    (async()=>{
-      if(saved===deviceKey){
-        try{
-          const f=await dbGet(fileKey);
-          if(f?.blob){await loadPersonal(f.blob);addOption(deviceKey,'Mi fuente: '+f.name);setFont(deviceKey)}
-        }catch{setFont('original')}
-      }else if(saved.startsWith('system:')){
-        addOption(saved,saved.slice(7));setFont(saved);
-      }else setFont(Object.hasOwn(fontFamilies,saved)?saved:'original');
-    })();
+    try{setFont(localStorage.getItem(fontKey))}catch{}
     return ()=>setFont(current);
   }
   const calendarPanel=document.getElementById('panel-calendar');
@@ -1988,8 +1942,7 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
   const reapplyGeneral=createFontControl({
     target:generalMenu.querySelector('.font-options'),
     id:'agenda-general-font-select',label:'Fuente',ariaLabel:'Elegir fuente general de la agenda',
-    originalLabel:'Original',fontKey:'agenda-carmen-tipografia-v2',fileKey:'actual',
-    faceName:'MiFuentePersonalCarmen',applyFont:applyGeneralFont
+    originalLabel:'Original',fontKey:'agenda-carmen-tipografia-v2',applyFont:applyGeneralFont
   });
   const notebookMenu=document.createElement('details');
   notebookMenu.id='agenda-notebook-font-menu';
@@ -2001,8 +1954,7 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
   createFontControl({
     target:notebookMenu.querySelector('.font-options'),
     id:'agenda-font-select',label:'Fuente',ariaLabel:'Elegir fuente de Mi agenda',
-    originalLabel:'Original',fontKey:'agenda-carmen-tipografia-cuaderno-v1',fileKey:'cuaderno',
-    faceName:'MiFuenteDelCuaderno',applyFont(font){
+    originalLabel:'Original',fontKey:'agenda-carmen-tipografia-cuaderno-v1',applyFont(font){
       notes.classList.toggle('notebook-custom-font',Boolean(font));
       if(font)notes.style.setProperty('--agenda-fuente-cuaderno',font);
       else notes.style.removeProperty('--agenda-fuente-cuaderno');
@@ -2393,8 +2345,6 @@ window.addEventListener('pagehide',stop);updateLabel();
 #notes-section .notebook-sticker-options:not([hidden]){display:grid;grid-template-columns:repeat(auto-fit,42px);gap:6px;width:min(100%,450px);padding:4px}
 #notes-section .notebook-sticker-options button{display:grid;place-items:center;width:42px;height:42px;padding:3px}
 #notes-section .notebook-sticker-options img{width:32px;height:32px;object-fit:contain;pointer-events:none}
-#notes-section .notebook-sticker-add{font-size:22px;line-height:1}
-#notes-section .notebook-sticker-status{grid-column:1/-1;margin:0;font-size:.8rem}
 #notes-section .notebook-sticker-art{display:block;width:100%;max-height:var(--object-height,140px);object-fit:contain;pointer-events:none}
 #notes-section .notebook-object:has(.notebook-frame-paper){margin-block:8px}
 #carmen-diary #notes-section .notebook-frame-wrap.is-plain .notebook-frame{border:0;border-radius:7px;background:color-mix(in srgb,var(--frame-color) 10%,white)}
@@ -2469,6 +2419,62 @@ window.addEventListener('pagehide',stop);updateLabel();
  const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
  let day='',items=[],original=null,kind='',motif='',selected=null;
  let draft=null,tap=null;
+ const writingTools=document.createElement('div');
+ writingTools.className='notebook-writing-tools';
+ writingTools.innerHTML='<button type="button" class="notebook-write" aria-label="Escribir texto" title="Escribir texto" aria-pressed="false">A</button><div class="notebook-alignment" role="group" aria-label="Alineación del texto" hidden></div>';
+ root.querySelector('.day-markup-tools').prepend(writingTools);
+ const writeButton=writingTools.querySelector('button');
+ const alignment=writingTools.querySelector('.notebook-alignment');
+ writingTools.parentElement.append(alignment);
+ const editorItems=new WeakMap();
+ let activeEditor=null, baseAlignment='';
+ function showAlignment(field){
+   activeEditor=field;
+   alignment.hidden=!field;
+   for(const button of alignment.children){
+     button.setAttribute('aria-pressed',String((field?.style.textAlign||'left')===button.value));
+   }
+ }
+ for(const [value,label,lines] of [
+   ['left','Alinear a la izquierda','M2 7h8m-8 6h8'],
+   ['center','Centrar','M4 7h8m-8 6h8'],
+   ['right','Alinear a la derecha','M6 7h8m-8 6h8'],
+   ['justify','Justificar','M2 7h12m-12 6h12']
+ ]){
+   const button=document.createElement('button');
+   button.type='button';
+   button.value=value;
+   button.title=label;
+   button.setAttribute('aria-label',label);
+   button.innerHTML='<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4h12m-12 6h12 '+lines+'"/></svg>';
+   button.addEventListener('pointerdown',event=>event.preventDefault());
+   button.onclick=()=>{
+     if(!activeEditor?.isConnected)return;
+     const item=editorItems.get(activeEditor);
+     if(item){item.align=value;activeEditor.style.textAlign=value;save();}
+     else {
+       baseAlignment=value;
+       surface.querySelectorAll('#free-note,.notebook-text').forEach(field=>{field.style.textAlign=value;});
+       try{localStorage.setItem(key()+':alineacion',value)}catch{}
+     }
+     showAlignment(activeEditor);
+   };
+   alignment.append(button);
+ }
+ surface.addEventListener('focusin',event=>{
+   const field=event.target;
+   if(editorItems.has(field)||field.matches('#free-note,.notebook-text'))showAlignment(field);
+ });
+ root.addEventListener('focusout',event=>{
+   if(event.relatedTarget&&(alignment.contains(event.relatedTarget)||event.relatedTarget===activeEditor))return;
+   if(event.target===activeEditor||alignment.contains(event.target))showAlignment(null);
+ });
+ writeButton.onclick=()=>{
+   const next=kind==='text'?'':'text';
+   menu.open=false;
+   choose(next);
+ };
+ diary.closest('#panel-diary').addEventListener('notebook-inking',()=>choose(''));
  function configureEditor(field){
    field.lang=navigator.languages?.[0]||navigator.language||document.documentElement.lang||'es';
    field.spellcheck=true;
@@ -2653,6 +2659,7 @@ window.addEventListener('pagehide',stop);updateLabel();
      const next=groups[index];
      const field=document.createElement('div');
      field.className='notebook-text';
+     field.style.textAlign=baseAlignment;
      configureEditor(field);
      field.setAttribute('contenteditable','plaintext-only');
      if(field.contentEditable!=='plaintext-only'){
@@ -2736,6 +2743,8 @@ window.addEventListener('pagehide',stop);updateLabel();
      }else{
        const field=document.createElement('textarea');
        configureEditor(field);
+       editorItems.set(field,item);
+       field.style.textAlign=item.align||'';
        field.readOnly=true;
        if(item.kind==='text'){
          field.className='notebook-text-box';
@@ -2954,6 +2963,9 @@ window.addEventListener('pagehide',stop);updateLabel();
    decor.hidden=!original;
    if(!original)return;
    configureEditor(original);
+   showAlignment(null);
+   try{baseAlignment=localStorage.getItem(key()+':alineacion')||''}catch{baseAlignment=''}
+   original.style.textAlign=baseAlignment;
    try{items=JSON.parse(localStorage.getItem(key())||'[]');if(!Array.isArray(items))items=[];}catch{items=[];}
    items=items.filter(item=>item&&Object.hasOwn(labels,item.kind));
    let assignedIds=false;
@@ -3009,25 +3021,6 @@ window.addEventListener('pagehide',stop);updateLabel();
    ['rama-verde','Rama verde'],
    ['tulipan-naranja','Tulipán naranja']
  ];
- const addSticker=document.createElement('button');
- addSticker.type='button';
- addSticker.textContent='+';
- addSticker.setAttribute('aria-label','Añadir pegatinas');
- addSticker.title='Añadir pegatinas';
- addSticker.className='notebook-sticker-add';
-
- const stickerFiles=document.createElement('input');
- stickerFiles.type='file';
- stickerFiles.accept='image/png,image/jpeg,image/webp,image/gif';
- stickerFiles.multiple=true;
- stickerFiles.hidden=true;
-
- const stickerStatus=document.createElement('p');
- stickerStatus.className='notebook-sticker-status';
- stickerStatus.setAttribute('role','status');
- stickerStatus.hidden=true;
- stickerOptions.append(addSticker,stickerFiles,stickerStatus);
-
  function selectSticker(button){
    stickerStyle=button.dataset.stickerChoice;
    stickerOptions.querySelectorAll('[data-sticker-choice]').forEach(choice=>{
@@ -3046,7 +3039,7 @@ window.addEventListener('pagehide',stop);updateLabel();
    image.src=sticker.src;
    image.alt='';
    button.append(image);
-   addSticker.before(button);
+   stickerOptions.append(button);
  }
  for(const [id,name] of stockStickers)addStickerChoice({id,name,src:'./pegatina-cuaderno-'+id+'.png'});
  for(const [id,name,ratio] of illustratedStickers){
@@ -3054,57 +3047,23 @@ window.addEventListener('pagehide',stop);updateLabel();
  }
  try{
    const saved=JSON.parse(localStorage.getItem(stickerLibraryKey)||'[]');
-   saved.forEach(addStickerChoice);
+   saved.forEach(sticker=>stickerLibrary.set(sticker.id,sticker));
  }catch{}
  stickerOptions.addEventListener('click',event=>{
    const button=event.target.closest('[data-sticker-choice]');
    if(button)selectSticker(button);
  });
- addSticker.addEventListener('click',()=>stickerFiles.click());
- stickerFiles.addEventListener('change',async()=>{
-   const files=[...stickerFiles.files];
-   stickerFiles.value='';
-   if(!files.length)return;
-   addSticker.disabled=true;
-   stickerStatus.hidden=false;
-   stickerStatus.textContent='Preparando imágenes…';
-   let added=0,failed=0;
-   try{
-     for(const file of files){
-       try{
-         const bitmap=await createImageBitmap(file);
-         const canvas=document.createElement('canvas');
-         const scale=Math.min(1,256/Math.max(bitmap.width,bitmap.height));
-         canvas.width=Math.max(1,Math.round(bitmap.width*scale));
-         canvas.height=Math.max(1,Math.round(bitmap.height*scale));
-         try{canvas.getContext('2d').drawImage(bitmap,0,0,canvas.width,canvas.height);}
-         finally{bitmap.close();}
-         const sticker={
-           id:'custom-'+crypto.randomUUID(),
-           name:file.name,
-           src:canvas.toDataURL('image/webp',0.88)
-         };
-         const saved=JSON.parse(localStorage.getItem(stickerLibraryKey)||'[]');
-         localStorage.setItem(stickerLibraryKey,JSON.stringify([...saved,sticker]));
-         addStickerChoice(sticker);
-         added++;
-       }catch{failed++;}
-     }
-     stickerStatus.textContent=failed
-       ? (added ? 'Añadidas: '+added+'. Imágenes sin guardar: '+failed+'.' : 'No se han podido guardar las imágenes.')
-       : (added===1 ? 'Pegatina guardada.' : 'Pegatinas guardadas.');
-   }finally{addSticker.disabled=false;}
- });
  const kinds=[...decor.querySelectorAll('[data-kind]')];
  const symbols=[...decor.querySelectorAll('[data-symbol]')];
  const picker=decor.querySelector('.notebook-symbol-picker'),currentSymbol=picker.querySelector('[data-current-symbol]');
  function choose(next){
-   kind=next;frameStyles.hidden=kind!=='frame';options.hidden=!kind;placement.hidden=!kind;picker.open=false;
+   if(next)root.dispatchEvent(new Event('notebook-writing',{bubbles:true}));
+   kind=next;writeButton.setAttribute('aria-pressed',String(kind==='text'));frameStyles.hidden=kind!=='frame';options.hidden=!kind||kind==='text';placement.hidden=!kind;picker.open=false;
    surface.classList.toggle('is-placing',!!kind);
    stickerOptions.hidden=kind!=='sticker';
    picker.hidden=kind==='sticker'||(kind==='frame'&&frameStyle==='plain');
    decor.querySelector('input[type=color]').parentElement.hidden=kind==='sticker';
-   placement.textContent=kind==='sticker'?'Toca Mi agenda o Mi planificación para colocar la pegatina.':'Toca el cuaderno donde quieras colocar el elemento.';
+   placement.textContent=kind==='text'?'Toca donde quieras escribir.':kind==='sticker'?'Toca Mi agenda o Mi planificación para colocar la pegatina.':'Toca el cuaderno donde quieras colocar el elemento.';
    kinds.forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.kind===kind)));
  }
  kinds.forEach(button=>button.addEventListener('click',()=>choose(button.dataset.kind)));
@@ -3113,7 +3072,7 @@ window.addEventListener('pagehide',stop);updateLabel();
    picker.querySelector('summary').focus();
    symbols.forEach(other=>other.setAttribute('aria-pressed',String(other===button)));
  }));
- menu.addEventListener('toggle',()=>{if(!menu.open)choose('');});
+ menu.addEventListener('toggle',()=>{if(!menu.open&&kind!=='text')choose('');});
  let suppressClick=false;
  function discardDraft(){
    if(!draft)return;
@@ -3193,6 +3152,7 @@ window.addEventListener('pagehide',stop);updateLabel();
  },true);
  document.addEventListener('pointerdown',event=>{
    suppressClick=false;
+   if(event.target.closest('.notebook-writing-tools,.notebook-alignment'))return;
    if(draft&&!draft.object.contains(event.target))discardDraft();
    if(event.target.closest('.notebook-object,.notebook-decor'))return;
    tap=null;
