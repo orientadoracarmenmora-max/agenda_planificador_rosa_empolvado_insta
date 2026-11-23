@@ -1056,7 +1056,7 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
     #carmen-diary .notebook-alignment:not([hidden]){position:absolute;bottom:100%;left:20px;z-index:16;display:flex;gap:3px}
     #carmen-diary .notebook-writing-tools [hidden]{display:none}
     #carmen-diary .notebook-align-toggle svg,#carmen-diary .notebook-sheet-size svg{display:block;width:17px;margin:auto;fill:none;stroke:currentColor;stroke-width:1.7}
-    #carmen-diary .notebook-sheet-size{margin-left:auto;touch-action:none;cursor:ns-resize}
+    #carmen-diary .day-markup-tools .notebook-sheet-size{margin-left:auto;touch-action:none;cursor:ns-resize}
     #carmen-diary .notebook-alignment svg{display:block;width:16px;margin:auto;stroke:currentColor;stroke-width:1.6}
     @media print{#carmen-diary .day-markup-tools{display:none}}
     #carmen-diary .day-markup-tools .sticker-tools{margin:0}
@@ -1164,7 +1164,7 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
     let pencilColor = '#61463f';
     let selectedDate;
     let layers = new Map();
-    let drawing = null;
+    let drawing = null, penSeen = false;
 
     function setPanel(panel) {
       for (const [control, options] of [[colorButton, palette], [widthButton, widthPanel]]) {
@@ -1403,11 +1403,23 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
       for (const mark of saved[key] || []) trace(layer, mark);
 
       layer.onpointerdown = event => {
-        if (drawing || !event.isPrimary || event.button !== 0) return;
+        const pen = daily && event.pointerType === 'pen';
+        if (event.button !== 0 || (!pen && !event.isPrimary)) return;
+        if (pen) penSeen = true;
+        if (penSeen && event.pointerType === 'touch') return;
+        if (pen && drawing?.pointerType === 'touch') {
+          const interrupted = drawing;
+          drawing = null;
+          interrupted.line?.remove();
+          if (interrupted.layer.hasPointerCapture(interrupted.pointer)) {
+            interrupted.layer.releasePointerCapture(interrupted.pointer);
+          }
+        }
+        if (drawing) return;
         event.preventDefault();
         layer.setPointerCapture(event.pointerId);
         if (erasing) {
-          drawing = {layer,pointer:event.pointerId,erase:true};
+          drawing = {layer,pointer:event.pointerId,pointerType:event.pointerType,erase:true};
           eraseAt(event, layer);
           return;
         }
@@ -1416,7 +1428,7 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
         if (pencil) mark.tool = 'pencil';
         if (anchor) mark.anchor = anchor.dataset.notebookId;
         else if(daily&&board.id==='note-content')mark.boardHeight=layer.getBoundingClientRect().height;
-        drawing = {layer,anchor,mark,pencil,line:trace(layer,mark),pointer:event.pointerId};
+        drawing = {layer,anchor,mark,pencil,line:trace(layer,mark),pointer:event.pointerId,pointerType:event.pointerType};
       };
       layer.onpointermove = event => {
         if (drawing?.layer !== layer || drawing.pointer !== event.pointerId) return;
@@ -1436,7 +1448,7 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
       function finish(event) {
         if (drawing?.layer !== layer || drawing.pointer !== event.pointerId) return;
         if (drawing.erase) { drawing = null; return; }
-        if (drawing.mark.points.length < 2) drawing.line.remove();
+        if ((daily && event.type === 'pointercancel' && drawing.pointerType === 'touch') || drawing.mark.points.length < 2) drawing.line.remove();
         else {
           (saved[key] ??= []).push(drawing.mark);
           save();
@@ -2575,9 +2587,9 @@ window.addEventListener('pagehide',stop);updateLabel();
  const resizeSheet=document.createElement('button');
  resizeSheet.type='button';
  resizeSheet.className='notebook-sheet-size';
- resizeSheet.title='Ampliar la hoja';
- resizeSheet.setAttribute('aria-label','Ampliar la hoja');
- resizeSheet.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 4v12m-3-3 3 3 3-3M10 5h7m-7 5h7m-7 5h7"/></svg>';
+ resizeSheet.title='Subir o bajar el borde de la hoja';
+ resizeSheet.setAttribute('aria-label','Cambiar la altura de la hoja');
+ resizeSheet.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M6 3v14M3 6l3-3 3 3M3 14l3 3 3-3M12 5h5m-5 5h5m-5 5h5"/></svg>';
  writingTools.parentElement.append(resizeSheet);
  let sheetDrag=null, movedSheet=false;
  function adjustSheet(height){
