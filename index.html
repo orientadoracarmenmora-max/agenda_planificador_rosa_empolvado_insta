@@ -943,9 +943,9 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
 #carmen-diary .body:after{opacity:.25;background:#e8e2dd}
 #diary-search-panel{background:#fff;margin:10px auto 14px;padding-inline:14px;width:min(100%,840px);font:14px Nunito,Arial,sans-serif;color:#61463f}
 #diary-search-panel .search-field{background:#fff;border-color:#e8e3e4}
-#carmen-diary .day-paper{position:relative;overflow:hidden;background:#fdfbf8;border-radius:16px;padding:21px}
+#carmen-diary .day-paper{position:relative;overflow:visible;background:#fdfbf8;border-radius:16px;padding:21px}
 #carmen-diary.non-school .day-paper{background:#fefbfc}
-#carmen-diary .day-paper:before{content:'';position:absolute;right:-22px;top:-17px;width:105px;height:55px;transform:rotate(15deg);border-radius:40% 60% 55% 45%;background:#e9e3df;opacity:.5;pointer-events:none}
+#carmen-diary .day-paper:before{content:'';position:absolute;right:0;top:0;width:83px;height:38px;border-radius:0 16px 0 80%;background:#e9e3df;opacity:.5;pointer-events:none}
 #carmen-diary .day-paper>div{position:relative}
 #carmen-diary .datebar,#carmen-diary.non-school .datebar{background:transparent;padding:0;margin-top:21px;margin-bottom:23px}
 #carmen-diary.non-school #non-school-label{display:table;padding:3px 10px;border-radius:12px;background:#f9eef2;color:#8b7a7d;margin:0 auto 20px;font-size:11px}
@@ -1028,6 +1028,7 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
     .hl-layer{position:absolute;inset:0;width:100%;height:100%;z-index:5;mix-blend-mode:multiply;pointer-events:none}
     .hl-layer.hl-active{pointer-events:auto;touch-action:none;cursor:crosshair}
     .hl-layer.hl-erasing polyline{pointer-events:stroke}
+    #carmen-diary #note-content>.hl-layer{overflow:visible}
     @media(max-width:450px){.hl-panel{left:var(--hl-panel-left,0px)}}
     @media print{.hl-tools,.hl-layer{display:none!important}}
   `;
@@ -1185,12 +1186,35 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
       return layer.parentElement.querySelector('[data-notebook-id="' + CSS.escape(id) + '"]:not(.is-slot)');
     }
 
+    function findAnchor(layer,x,y) {
+      return doc.elementsFromPoint(x,y)
+        .map(part => part.closest('[data-notebook-id]:not(.is-slot)'))
+        .find(part => part && layer.parentElement.contains(part));
+    }
+
+    function pointInAnchor(x,y,g) {
+      const dx=x-g.x,dy=y-g.y;
+      return [Math.round((dx*g.cos+dy*g.sin)/g.w*1000),
+        Math.round((-dx*g.sin+dy*g.cos)/g.h*1000)].join(',');
+    }
+
+    function screenPoints(layer,mark) {
+      const bounds=layer.getBoundingClientRect();
+      return mark.points.map(pair=>{
+        const [x,y]=pair.split(',').map(Number);
+        return [bounds.left+x/1000*bounds.width,bounds.top+y/1000*bounds.height];
+      });
+    }
+
+    function attachMark(layer,mark,anchor) {
+      const g=geometry(anchor);
+      if(!g.w||!g.h)return;
+      mark.points=screenPoints(layer,mark).map(([x,y])=>pointInAnchor(x,y,g));
+      mark.anchor=anchor.dataset.notebookId;
+    }
+
     function points(event, layer, anchor) {
-      if (anchor) {
-        const g = geometry(anchor), x = event.clientX - g.x, y = event.clientY - g.y;
-        return [Math.round((x * g.cos + y * g.sin) / g.w * 1000),
-          Math.round((-x * g.sin + y * g.cos) / g.h * 1000)].join(',');
-      }
+      if(anchor)return pointInAnchor(event.clientX,event.clientY,geometry(anchor));
       const rect = layer.getBoundingClientRect();
       const clamp = value => Math.round(Math.max(0, Math.min(1000, value * 1000)));
       return [clamp((event.clientX - rect.left) / rect.width), clamp((event.clientY - rect.top) / rect.height)].join(',');
@@ -1282,9 +1306,7 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
           eraseAt(event, layer);
           return;
         }
-        const anchor = daily ? doc.elementsFromPoint(event.clientX, event.clientY)
-          .map(part => part.closest('[data-notebook-id]:not(.is-slot)'))
-          .find(part => part && layer.parentElement.contains(part)) : null;
+        const anchor = daily ? findAnchor(layer,event.clientX,event.clientY) : null;
         const mark = {color:color[1],intensity,width:width[1],points:[points(event, layer, anchor)],order:++order};
         if (anchor) mark.anchor = anchor.dataset.notebookId;
         drawing = {layer,anchor,mark,line:trace(layer,mark),pointer:event.pointerId};
@@ -1292,6 +1314,13 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
       layer.onpointermove = event => {
         if (drawing?.layer !== layer || drawing.pointer !== event.pointerId) return;
         if (drawing.erase) { eraseAt(event, layer); return; }
+        if (daily && !drawing.anchor) {
+          const anchor=findAnchor(layer,event.clientX,event.clientY);
+          if(anchor){
+            attachMark(layer,drawing.mark,anchor);
+            drawing.anchor=anchor;
+          }
+        }
         const next = points(event, layer, drawing.anchor);
         if (next === drawing.mark.points.at(-1)) return;
         drawing.mark.points.push(next);
@@ -1349,6 +1378,22 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
     observer.observe(placement, {subtree:true,childList:true,attributes:true,attributeFilter:['hidden','aria-selected']});
     if (daily) {
       const notebook = placement.querySelector('#note-content');
+      notebook.addEventListener('notebook-move-start',event=>{
+        const anchor=event.target,layer=layers.get(notebook);
+        if(!layer||!anchor.dataset.notebookId)return;
+        let changed=false;
+        for(const line of layer.children){
+          const mark=lineMarks.get(line);
+          if(!mark||mark.anchor)continue;
+          const hits=screenPoints(layer,mark).map(([x,y])=>findAnchor(layer,x,y));
+          const visible=hits.filter(Boolean);
+          if(visible.length<2||visible.length<hits.length/2||visible.some(hit=>hit!==anchor))continue;
+          attachMark(layer,mark,anchor);
+          paintLine(layer,line,mark);
+          changed=true;
+        }
+        if(changed)save();
+      });
       const geometryObserver = new MutationObserver(changes => {
         if (changes.some(change => !change.target.closest?.('.hl-layer') &&
           (change.type === 'childList' || change.target.matches('.notebook-object,.notebook-segments')))) refreshAnchoredMarks();
@@ -1670,9 +1715,9 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
   style.id = 'mejoras-carmen-estilo';
   style.textContent = `
   @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&family=Josefin+Sans:wght@400;500;700&family=Patrick+Hand&family=Quicksand:wght@400;500;700&display=swap');
-  #carmen-diary .font-control{display:flex;align-items:center;gap:9px;flex-wrap:wrap;position:relative;z-index:4}
+  #carmen-diary .font-control{display:flex;align-items:center;gap:6px;position:relative;z-index:4}
   #carmen-diary .font-control label{font-size:12px;font-weight:700;color:#795c60}
-  #carmen-diary .font-control select{width:min(205px,60vw);padding:8px 11px;background:white;color:#61463f;border:1px solid #e2d1d5;border-radius:9px;font-size:13px}
+  #carmen-diary .font-control select{width:min(160px,38vw);padding:6px 8px;background:white;color:#61463f;border:1px solid #e2d1d5;border-radius:9px;font-size:13px}
   #carmen-diary .columns{display:flex!important;flex-direction:column!important;gap:18px!important;max-width:970px;margin:0 auto}
   #carmen-diary .columns>.col{display:contents!important}
   #carmen-diary .columns .sheet{width:100%}
@@ -1684,7 +1729,8 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
     background:transparent!important;
     border:0!important;overflow:hidden}
   #carmen-diary #notes-section .notecontent{padding:13px 20px 24px}
-  @media(max-width:650px){#carmen-diary .font-control{width:100%}#carmen-diary #free-note{min-height:300px!important}}
+  @media(max-width:650px){#carmen-diary #free-note{min-height:300px!important}}
+  @media(max-width:400px){#carmen-diary .font-control select{width: min(110px,30vw);padding-inline:4px}#carmen-diary .font-control label{position:absolute;clip-path:inset(50%);width:1px;height:1px;overflow:hidden}}
   body.agenda-fuente-personalizada #carmen-diary :is(h1,h2,h3,button,label,input,textarea,p,strong,small,time,span,select,.notebook-text),
   body.agenda-fuente-personalizada .switcher button{font-family:var(--agenda-fuente)!important}
   body.agenda-fuente-personalizada :is(.calendar-resource,.planner-resource,#planner,#app,#panel-calendar,#panel-planner)
@@ -1695,11 +1741,10 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
   document.head.appendChild(style);
 
   // Mantener los datos originales: no se borran registros antiguos ni se cambia su formato.
-  const header = diary.querySelector('.heading');
-  const oldRole = header?.querySelector('.role');
+  diary.querySelector('.heading .role')?.remove();
   const wrap = document.createElement('div');
   wrap.className = 'font-control';
-  wrap.innerHTML = `<label for="agenda-font-select">Tipografía</label>
+  wrap.innerHTML = `<label for="agenda-font-select">Fuente</label>
     <select id="agenda-font-select" aria-label="Elegir fuente para toda la agenda">
       <optgroup label="Fuentes de la agenda">
         <option value="original">Original</option>
@@ -1709,12 +1754,11 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
         <option value="quicksand">Quicksand</option>
         <option value="patrick">Patrick Hand</option><option value="barlow">Barlow Condensed</option>
       </optgroup>
-      <optgroup label="Mis fuentes" id="agenda-local-fonts"></optgroup>
+      <optgroup label="Fuentes del dispositivo" id="agenda-local-fonts"></optgroup>
       <option value="detect">Detectar fuentes del dispositivo…</option>
       <option value="upload">Cargar mi fuente…</option>
     </select>`;
-  oldRole?.replaceWith(wrap);
-  if (!oldRole) header?.appendChild(wrap);
+  diary.querySelector('.day-markup-tools').prepend(wrap);
   const select=wrap.querySelector('select');
   const input=document.createElement('input');
   input.type='file'; input.accept='.ttf,.otf,.woff,.woff2,font/ttf,font/otf,font/woff,font/woff2';
@@ -1821,19 +1865,23 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
       }catch{}
     }
   }
-  async function detectFonts(){
+  async function detectFonts(interactive=true){
     if(typeof window.queryLocalFonts!=='function'){
-      alert('Este navegador no permite enumerar las fuentes. Usa «Cargar mi fuente…».');
+      if(interactive)alert('Este navegador no permite enumerar las fuentes. Usa «Cargar mi fuente…».');
       return;
     }
     try{
       const found=await window.queryLocalFonts();
       const names=[...new Set(found.map(f=>f.family).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'));
-      if(!names.length){alert('No se han encontrado fuentes disponibles.');return}
-      const group=wrap.querySelector('#agenda-local-fonts');
+      if(!names.length){if(interactive)alert('No se han encontrado fuentes disponibles.');return}
       names.forEach(name=>addOption('system:'+name,name));
       select.value=current;
-    }catch{alert('No se ha autorizado consultar las fuentes del dispositivo. Puedes cargar una fuente manualmente.')}
+    }catch{if(interactive)alert('No se ha autorizado consultar las fuentes del dispositivo. Puedes cargar una fuente manualmente.')}
+  }
+  if(typeof window.queryLocalFonts==='function'&&navigator.permissions){
+    navigator.permissions.query({name:'local-fonts'}).then(permission=>{
+      if(permission.state==='granted')detectFonts(false);
+    }).catch(()=>{});
   }
   select.addEventListener('change',async()=>{
     const id=select.value;
@@ -2392,6 +2440,13 @@ window.addEventListener('pagehide',stop);updateLabel();
    if(position.region!=='planning'||!planning)return position;
    return {...position,y:position.y+planningOffset()};
  }
+ function stickerFrame(y){
+   const day=root.getBoundingClientRect();
+   if(!planning)return day;
+   const plan=planning.getBoundingClientRect();
+   const between=(plan.bottom+day.top)/2;
+   return y<between?plan:day;
+ }
  function paintPosition(item,object,position){
    object.style.left=position.x+'%';
    object.style.top=position.y+'px';
@@ -2403,16 +2458,24 @@ window.addEventListener('pagehide',stop);updateLabel();
    const canvas=surface.getBoundingClientRect(),page=paper.getBoundingClientRect();
    let box=object.getBoundingClientRect();
    if(!canvas.width||!page.width)return position;
-   const edge=2,maxWidth=page.width-edge*2;
+   const sticker=item.kind==='sticker';
+   const viewportRight=document.documentElement.clientWidth;
+   const edge=2;
+   const safeLeft=sticker?0:page.left,safeRight=sticker?viewportRight:page.right;
+   const maxWidth=safeRight-safeLeft-edge*2;
    if(maxWidth>0&&box.width>maxWidth){
      object.style.scale=maxWidth/box.width;
      box=object.getBoundingClientRect();
    }
+   const centerX=(box.left+box.right)/2,centerY=(box.top+box.bottom)/2;
+   const area=sticker?stickerFrame(centerY):canvas;
    const inside=Math.min(16,box.width/2);
-   const minShift=Math.max(page.left+edge-box.left,canvas.left+inside-box.right);
-   const maxShift=Math.min(page.right-edge-box.right,canvas.right-inside-box.left);
+   const leftBound=sticker?area.left-centerX:area.left+inside-box.right;
+   const rightBound=sticker?area.right-centerX:area.right-inside-box.left;
+   const minShift=Math.max(safeLeft+edge-box.left,leftBound);
+   const maxShift=Math.min(safeRight-edge-box.right,rightBound);
    const dx=clamp(0,minShift,Math.max(minShift,maxShift));
-   const dy=Math.max(0,page.top+edge-box.top);
+   const dy=sticker?Math.max(page.top+edge-box.top,clamp(centerY,area.top,area.bottom)-centerY):Math.max(0,page.top+edge-box.top);
    const adjusted={...position,x:position.x+dx/canvas.width*100,y:position.y+dy};
    object.style.left=adjusted.x+'%';
    object.style.top=adjusted.y+'px';
@@ -2445,11 +2508,18 @@ window.addEventListener('pagehide',stop);updateLabel();
  function decorationLimits(kind,width){
    if(kind!=='sticker'&&kind!=='frame')return {left:0,right:100,top:0};
    const bounds=surface.getBoundingClientRect(),page=paper.getBoundingClientRect();
+   if(kind==='sticker'){
+     return {
+       left:-bounds.left/width*100,
+       right:(document.documentElement.clientWidth-bounds.left)/width*100,
+       top:page.top-bounds.top
+     };
+   }
    const bleed=28;
    return {
      left:Math.max(-bleed,page.left-bounds.left)/width*100,
      right:100+Math.min(bleed,page.right-bounds.right)/width*100,
-     top:kind==='sticker'&&planning?Math.max(page.top-bounds.top,planningOffset()-16):0
+     top:0
    };
  }
  if(planning&&typeof ResizeObserver==='function'){
@@ -2636,6 +2706,7 @@ window.addEventListener('pagehide',stop);updateLabel();
        if(kind||event.target.closest('button,input')||!editor)return;
        select(item,object);
        if(!editor.readOnly)return;
+       if(item.kind==='frame'&&(event.target===editor||document.elementFromPoint(event.clientX,event.clientY)===editor)){edit();return;}
        if(lastEditTap&&event.timeStamp-lastEditTap.time<450&&
          Math.hypot(event.clientX-lastEditTap.x,event.clientY-lastEditTap.y)<24){
          lastEditTap=null;
@@ -2704,6 +2775,7 @@ window.addEventListener('pagehide',stop);updateLabel();
        const {action,start,x,y,angle,cx,cy}=gesture;
        const dx=event.clientX-x,dy=event.clientY-y;
        if(!gesture.changed&&Math.hypot(dx,dy)<5)return;
+       if(!gesture.changed&&action==='move'&&item.id)object.dispatchEvent(new Event('notebook-move-start',{bubbles:true}));
        gesture.changed=true;
        suppressClick=true;
        const full=surface.clientWidth;
