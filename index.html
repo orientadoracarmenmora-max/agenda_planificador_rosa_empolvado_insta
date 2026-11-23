@@ -2474,7 +2474,14 @@ window.addEventListener('pagehide',stop);updateLabel();
    menu.open=false;
    choose(next);
  };
- diary.closest('#panel-diary').addEventListener('notebook-inking',()=>choose(''));
+ function finishEditing(){
+   if(activeEditor===document.activeElement)activeEditor?.blur();
+   showAlignment(null);
+ }
+ diary.closest('#panel-diary').addEventListener('notebook-inking',()=>{
+   finishEditing();
+   choose('');
+ });
  function configureEditor(field){
    field.lang=navigator.languages?.[0]||navigator.language||document.documentElement.lang||'es';
    field.spellcheck=true;
@@ -3152,7 +3159,9 @@ window.addEventListener('pagehide',stop);updateLabel();
  },true);
  document.addEventListener('pointerdown',event=>{
    suppressClick=false;
-   if(event.target.closest('.notebook-writing-tools,.notebook-alignment'))return;
+   if(event.target.closest('.notebook-alignment'))return;
+   if(activeEditor&&!activeEditor.contains(event.target))finishEditing();
+   if(event.target.closest('.notebook-writing-tools'))return;
    if(draft&&!draft.object.contains(event.target))discardDraft();
    if(event.target.closest('.notebook-object,.notebook-decor'))return;
    tap=null;
