@@ -1051,9 +1051,12 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
     #carmen-diary .day-markup-tools .hl-color{background:#fefcf9;color:#78534e}
     #carmen-diary .day-markup-tools .hl-color.hl-on{background:#fff1c1}
     #carmen-diary .notebook-writing-tools{display:flex;gap:4px;align-items:center}
-    #carmen-diary .day-markup-tools :is(.notebook-write,.notebook-alignment button){min-width:34px;height:34px;border:1px solid #d7c2bd;border-radius:8px;background:#fefcf9;color:#78534e;cursor:pointer}
-    #carmen-diary .day-markup-tools :is(.notebook-write,.notebook-alignment button)[aria-pressed=true]{background:#eed9df}
+    #carmen-diary .day-markup-tools :is(.notebook-write,.notebook-align-toggle,.notebook-sheet-size,.notebook-alignment button){min-width:34px;height:34px;border:1px solid #d7c2bd;border-radius:8px;background:#fefcf9;color:#78534e;cursor:pointer}
+    #carmen-diary .day-markup-tools :is(.notebook-write,.notebook-align-toggle,.notebook-sheet-size,.notebook-alignment button)[aria-pressed=true]{background:#eed9df}
     #carmen-diary .notebook-alignment:not([hidden]){position:absolute;bottom:100%;left:20px;z-index:16;display:flex;gap:3px}
+    #carmen-diary .notebook-writing-tools [hidden]{display:none}
+    #carmen-diary .notebook-align-toggle svg,#carmen-diary .notebook-sheet-size svg{display:block;width:17px;margin:auto;fill:none;stroke:currentColor;stroke-width:1.7}
+    #carmen-diary .notebook-sheet-size{margin-left:auto;touch-action:none;cursor:ns-resize}
     #carmen-diary .notebook-alignment svg{display:block;width:16px;margin:auto;stroke:currentColor;stroke-width:1.6}
     @media print{#carmen-diary .day-markup-tools{display:none}}
     #carmen-diary .day-markup-tools .sticker-tools{margin:0}
@@ -1300,7 +1303,7 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
       const bounds=layer.getBoundingClientRect();
       return mark.points.map(pair=>{
         const [x,y]=pair.split(',').map(Number);
-        return [bounds.left+x/1000*bounds.width,bounds.top+y/1000*bounds.height];
+        return [bounds.left+x/1000*bounds.width,bounds.top+y/1000*(mark.boardHeight||bounds.height)];
       });
     }
 
@@ -1321,7 +1324,11 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
     const lineMarks = new WeakMap();
     function paintLine(layer, line, mark) {
       if (!mark.anchor) {
-        line.setAttribute('points', mark.points.join(' '));
+        const scale=mark.boardHeight ? mark.boardHeight/(layer.getBoundingClientRect().height||mark.boardHeight) : 1;
+        line.setAttribute('points', mark.points.map(pair=>{
+          const [x,y]=pair.split(',');
+          return [x,Number(y)*scale].join(',');
+        }).join(' '));
         return;
       }
       const anchor = anchoredElement(layer, mark.anchor);
@@ -1369,7 +1376,7 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
         for (const layer of layers.values()) {
           for (const line of layer.children) {
             const mark = lineMarks.get(line);
-            if (mark?.anchor) paintLine(layer, line, mark);
+            if (mark?.anchor||mark?.boardHeight) paintLine(layer, line, mark);
           }
         }
       });
@@ -1408,6 +1415,7 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
         const mark = {color:pencil ? pencilColor : color[1],intensity:pencil ? 1 : intensity,width:pencil ? 2 : width[1],points:[points(event, layer, anchor)],order:++order};
         if (pencil) mark.tool = 'pencil';
         if (anchor) mark.anchor = anchor.dataset.notebookId;
+        else if(daily&&board.id==='note-content')mark.boardHeight=layer.getBoundingClientRect().height;
         drawing = {layer,anchor,mark,pencil,line:trace(layer,mark),pointer:event.pointerId};
       };
       layer.onpointermove = event => {
@@ -1477,6 +1485,18 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
     observer.observe(placement, {subtree:true,childList:true,attributes:true,attributeFilter:['hidden','aria-selected']});
     if (daily) {
       const notebook = placement.querySelector('#note-content');
+      notebook.addEventListener('notebook-resize-start',()=>{
+        const layer=layers.get(notebook);
+        const height=layer?.getBoundingClientRect().height;
+        if(!height)return;
+        let changed=false;
+        for(const mark of saved[layer.dataset.key]||[]){
+          if(mark.anchor||mark.boardHeight)continue;
+          mark.boardHeight=height;
+          changed=true;
+        }
+        if(changed)save();
+      });
       notebook.addEventListener('notebook-move-start',event=>{
         const anchor=event.target,layer=layers.get(notebook);
         if(!layer||!anchor.dataset.notebookId)return;
@@ -2422,16 +2442,24 @@ window.addEventListener('pagehide',stop);updateLabel();
  let draft=null,tap=null;
  const writingTools=document.createElement('div');
  writingTools.className='notebook-writing-tools';
- writingTools.innerHTML='<button type="button" class="notebook-write" aria-label="Escribir texto" title="Escribir texto" aria-pressed="false">A</button><div class="notebook-alignment" role="group" aria-label="Alineación del texto" hidden></div>';
+ writingTools.innerHTML='<button type="button" class="notebook-write" aria-label="Escribir texto" title="Escribir texto" aria-pressed="false">A</button><button type="button" class="notebook-align-toggle" aria-label="Alineación del texto" title="Alineación del texto" aria-expanded="false" aria-controls="notebook-alignment" hidden><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3h12m-12 5h12m-12 5h8"/></svg></button><div id="notebook-alignment" class="notebook-alignment" role="group" aria-label="Alineación del texto" hidden></div>';
  root.querySelector('.day-markup-tools').prepend(writingTools);
  const writeButton=writingTools.querySelector('button');
+ const alignToggle=writingTools.querySelector('.notebook-align-toggle');
  const alignment=writingTools.querySelector('.notebook-alignment');
  writingTools.parentElement.append(alignment);
  const editorItems=new WeakMap();
- let activeEditor=null, baseAlignment='';
+ let activeEditor=null, baseAlignment='', sheetHeight=0;
+ function setAlignmentMenu(open){
+   alignment.hidden=!open;
+   alignToggle.setAttribute('aria-expanded',String(open));
+ }
+ alignToggle.addEventListener('pointerdown',event=>event.preventDefault());
+ alignToggle.onclick=()=>setAlignmentMenu(!!activeEditor&&alignment.hidden);
  function showAlignment(field){
    activeEditor=field;
-   alignment.hidden=!field;
+   alignToggle.hidden=!field;
+   setAlignmentMenu(false);
    for(const button of alignment.children){
      button.setAttribute('aria-pressed',String((field?.style.textAlign||'left')===button.value));
    }
@@ -2458,6 +2486,7 @@ window.addEventListener('pagehide',stop);updateLabel();
        surface.querySelectorAll('#free-note,.notebook-text').forEach(field=>{field.style.textAlign=value;});
        try{localStorage.setItem(key()+':alineacion',value)}catch{}
      }
+     if(alignment.contains(document.activeElement))alignToggle.focus({preventScroll:true});
      showAlignment(activeEditor);
    };
    alignment.append(button);
@@ -2467,8 +2496,8 @@ window.addEventListener('pagehide',stop);updateLabel();
    if(editorItems.has(field)||field.matches('#free-note,.notebook-text'))showAlignment(field);
  });
  root.addEventListener('focusout',event=>{
-   if(event.relatedTarget&&(alignment.contains(event.relatedTarget)||event.relatedTarget===activeEditor))return;
-   if(event.target===activeEditor||alignment.contains(event.target))showAlignment(null);
+   if(event.relatedTarget&&(alignment.contains(event.relatedTarget)||event.relatedTarget===alignToggle||event.relatedTarget===activeEditor))return;
+   if(event.target===activeEditor||event.target===alignToggle||alignment.contains(event.target))showAlignment(null);
  });
  writeButton.onclick=()=>{
    const next=kind==='text'?'':'text';
@@ -2540,8 +2569,52 @@ window.addEventListener('pagehide',stop);updateLabel();
    for(const object of surface.querySelectorAll('.notebook-object.is-floating')){
      bottom=Math.max(bottom,Math.ceil(object.getBoundingClientRect().bottom-canvasTop)+16);
    }
-   surface.style.minHeight=bottom?bottom+'px':'';
+   const height=Math.max(bottom,sheetHeight);
+   surface.style.minHeight=height?height+'px':'';
  }
+ const resizeSheet=document.createElement('button');
+ resizeSheet.type='button';
+ resizeSheet.className='notebook-sheet-size';
+ resizeSheet.title='Ampliar la hoja';
+ resizeSheet.setAttribute('aria-label','Ampliar la hoja');
+ resizeSheet.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 4v12m-3-3 3 3 3-3M10 5h7m-7 5h7m-7 5h7"/></svg>';
+ writingTools.parentElement.append(resizeSheet);
+ let sheetDrag=null, movedSheet=false;
+ function adjustSheet(height){
+   sheetHeight=clamp(Math.round(height),300,5000);
+   layoutCanvas();
+ }
+ function saveSheetHeight(){
+   try{localStorage.setItem(key()+':altura',String(sheetHeight))}catch{}
+ }
+ resizeSheet.addEventListener('pointerdown',event=>{
+   if(!event.isPrimary||event.button!==0||!original)return;
+   movedSheet=false;
+   sheetDrag={id:event.pointerId,y:event.clientY+scrollY,height:surface.offsetHeight};
+   resizeSheet.setPointerCapture(event.pointerId);
+ });
+ resizeSheet.addEventListener('pointermove',event=>{
+   if(sheetDrag?.id!==event.pointerId)return;
+   const delta=event.clientY+scrollY-sheetDrag.y;
+   if(!movedSheet&&Math.abs(delta)<5)return;
+   if(!movedSheet)content.dispatchEvent(new Event('notebook-resize-start'));
+   movedSheet=true;
+   adjustSheet(sheetDrag.height+delta);
+ });
+ function finishSheetDrag(event){
+   if(sheetDrag?.id!==event.pointerId)return;
+   if(movedSheet)saveSheetHeight();
+   sheetDrag=null;
+ }
+ resizeSheet.addEventListener('pointerup',finishSheetDrag);
+ resizeSheet.addEventListener('pointercancel',finishSheetDrag);
+ resizeSheet.addEventListener('lostpointercapture',finishSheetDrag);
+ resizeSheet.onclick=event=>{
+   if(!original||(event.detail!==0&&movedSheet))return;
+   content.dispatchEvent(new Event('notebook-resize-start'));
+   adjustSheet(surface.offsetHeight+180);
+   saveSheetHeight();
+ };
  function planningOffset(){
    return planning.getBoundingClientRect().top-surface.getBoundingClientRect().top;
  }
@@ -2974,6 +3047,8 @@ window.addEventListener('pagehide',stop);updateLabel();
    showAlignment(null);
    try{baseAlignment=localStorage.getItem(key()+':alineacion')||''}catch{baseAlignment=''}
    original.style.textAlign=baseAlignment;
+   sheetDrag=null;
+   try{sheetHeight=clamp(Number(localStorage.getItem(key()+':altura'))||0,0,5000)}catch{sheetHeight=0}
    try{items=JSON.parse(localStorage.getItem(key())||'[]');if(!Array.isArray(items))items=[];}catch{items=[];}
    items=items.filter(item=>item&&Object.hasOwn(labels,item.kind));
    let assignedIds=false;
@@ -3160,7 +3235,7 @@ window.addEventListener('pagehide',stop);updateLabel();
  },true);
  document.addEventListener('pointerdown',event=>{
    suppressClick=false;
-   if(event.target.closest('.notebook-alignment'))return;
+   if(event.target.closest('.notebook-alignment,.notebook-align-toggle'))return;
    if(activeEditor&&!activeEditor.contains(event.target))finishEditing();
    if(event.target.closest('.notebook-writing-tools'))return;
    if(draft&&!draft.object.contains(event.target))discardDraft();
@@ -3171,6 +3246,10 @@ window.addEventListener('pagehide',stop);updateLabel();
    surface.querySelectorAll('.is-selected').forEach(el=>el.classList.remove('is-selected'));
  });
  document.addEventListener('keydown',event=>{
+   if(event.key==='Escape'&&!alignment.hidden){
+     setAlignmentMenu(false);
+     alignToggle.focus({preventScroll:true});
+   }
    if(event.key==='Escape'&&kind){
      choose('');
      menu.querySelector('summary').focus();
