@@ -789,7 +789,7 @@ const overlay=document.getElementById('event-overlay');if(overlay){const place=(
 <section class="sheet"><div class="sheethead"><h2>Mi horario</h2><span class="small">Del planificador semanal</span></div><div class="schedule" id="day-sessions"></div></section>
 </div><div class="col">
 <section class="sheet"><div class="sheethead"><h2>Tres prioridades para hoy</h2><span class="small">Un paso cada vez</span></div><div class="priorities" id="priorities"></div></section>
-<section class="sheet"><div class="sheethead"><h2 id="note-heading">Mi agenda</h2><button class="add" id="add-note">+ Otra nota</button></div><div class="note-tabs" id="note-tabs"></div><div class="notecontent" id="note-content"></div></section>
+<section class="sheet"><div class="sheethead"><h2 id="note-heading">Mi agenda</h2><button class="add" id="add-note">+ Otra nota</button></div><div class="note-tabs" id="note-tabs"></div><div class="notecontent" id="note-content"></div><div class="day-markup-tools"></div></section>
 </div></div>
 <section class="closing"><form id="tomorrow-form" class="closing-entry"><label for="closing-note">Para mañana…</label><input id="closing-note" placeholder="Por ejemplo: preparar la próxima tutoría" maxlength="2000"><button type="submit" id="include-tomorrow">Incluir</button></form><div id="tomorrow-list"></div></section>
 </div>
@@ -997,12 +997,14 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
   const css = `
     .hl-row,.hl-tools{display:flex;align-items:center;flex-wrap:wrap;gap:6px}
     .hl-row{column-gap:18px}
-    #carmen-diary .today-tools{flex-direction:column;align-items:flex-start;gap:8px}
-    #carmen-diary .today-tools .hl-row{column-gap:18px;row-gap:6px}
-    #carmen-diary .today-tools .mark,#carmen-diary .today-tools .hl-tools button,#carmen-diary .today-tools .sticker-command{min-height:34px}
-    #carmen-diary .today-tools .sticker-tools{margin-left:0}
-    #carmen-diary .today-tools .sticker-command{font:600 12px system-ui;padding:4px 8px;border:1px solid #d7c2bd;border-radius:8px;background:#fefcf9;color:#78534e;cursor:pointer}
-    #carmen-diary .today-tools .sticker-command:disabled{opacity:.48;cursor:default}
+    #carmen-diary .sheethead.today-tools{justify-content:flex-start;gap:12px;flex-wrap:wrap}
+    #carmen-diary .today-tools .marks{order:-1;margin:0}
+    #carmen-diary .day-markup-tools{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:0 20px 13px}
+    #carmen-diary .day-markup-tools .hl-panel{top:auto;bottom:calc(100% + 5px)}
+    #carmen-diary .day-markup-tools .hl-tools button{min-height:34px}
+    #carmen-diary .day-markup-tools .hl-eraser svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+    #carmen-diary .day-markup-tools .sticker-tools{margin:0}
+    #carmen-diary .day-markup-tools .sticker-command{font:600 12px system-ui;padding:4px 8px;border:1px solid #d7c2bd;border-radius:8px;background:#fefcf9;color:#78534e;cursor:pointer}
     .hl-row>.completion-tools,.hl-row>.marks,#app [data-template-id="weekly-summary-panel"] .hl-row>.completion-tools{margin:0!important}
     .hl-tools{position:relative;z-index:12;padding:2px 0;color:#78534e}
     .hl-tools button{display:inline-grid;place-items:center;min-width:30px;min-height:30px;padding:0 4px;border:1px solid #d7c2bd;border-radius:8px;background:#fefcf9;color:#78534e;font:600 15px system-ui;cursor:pointer}
@@ -1025,6 +1027,7 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
     .hl-board{position:relative!important}
     .hl-layer{position:absolute;inset:0;width:100%;height:100%;z-index:5;mix-blend-mode:multiply;pointer-events:none}
     .hl-layer.hl-active{pointer-events:auto;touch-action:none;cursor:crosshair}
+    .hl-layer.hl-erasing polyline{pointer-events:stroke}
     @media(max-width:450px){.hl-panel{left:var(--hl-panel-left,0px)}}
     @media print{.hl-tools,.hl-layer{display:none!important}}
   `;
@@ -1040,10 +1043,16 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
     const bar = create(doc, 'div', 'hl-tools');
     bar.setAttribute('role', 'group');
     bar.setAttribute('aria-label', 'Subrayador pastel');
-    native.before(row);
-    if (native.style.marginRight === 'auto') row.style.marginRight = 'auto';
-    if (native.style.marginTop) row.style.marginTop = native.style.marginTop;
-    row.append(native, bar);
+    const daily = name === 'hoy';
+    if (daily) {
+      placement.querySelector('.day-markup-tools').prepend(row);
+      row.append(bar);
+    } else {
+      native.before(row);
+      if (native.style.marginRight === 'auto') row.style.marginRight = 'auto';
+      if (native.style.marginTop) row.style.marginTop = native.style.marginTop;
+      row.append(native, bar);
+    }
 
     function button(label, content, className, parent = bar) {
       const btn = create(doc, 'button', className);
@@ -1059,8 +1068,10 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
     const widthButton = button('Elegir grosor del subrayador', '', 'hl-round');
     const sample = create(doc, 'span', 'hl-sample');
     widthButton.append(sample);
+    const eraserButton = daily ? button('Goma de subrayado', '', 'hl-round hl-eraser') : null;
+    if (eraserButton) eraserButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 13 8-8a2 2 0 0 1 3 0l4 4a2 2 0 0 1 0 3l-7 7H8l-4-4a1.4 1.4 0 0 1 0-2Z"/><path d="m8 9 8 8M12 19h8"/></svg>';
     const undoButton = button('Deshacer última marca', '↶', 'hl-undo');
-    const offButton = button('Salir del subrayado', '×', 'hl-off');
+    const offButton = daily ? null : button('Salir del subrayado', '×', 'hl-off');
     const palette = create(doc, 'div', 'hl-panel hl-palette');
     const widthPanel = create(doc, 'div', 'hl-panel hl-widths');
     bar.append(palette, widthPanel);
@@ -1083,7 +1094,8 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
       slider.setAttribute('aria-valuetext', slider.value + ' %');
       renderControls();
     };
-    let active = false;
+    let active = false, erasing = false;
+    const erased = [];
     let selectedDate;
     let layers = new Map();
     let drawing = null;
@@ -1100,11 +1112,19 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
       }
     }
 
-    function setActive(value) {
+    function updateLayerMode(layer) {
+      layer.classList.toggle('hl-active', active);
+      layer.classList.toggle('hl-erasing', erasing);
+    }
+
+    function setActive(value, erase = false) {
       active = value;
-      offButton.disabled = !value;
-      colorButton.classList.toggle('hl-on', value);
-      for (const layer of layers.values()) layer.classList.toggle('hl-active', value);
+      erasing = value && erase;
+      if (offButton) offButton.disabled = !value;
+      if (eraserButton) eraserButton.setAttribute('aria-pressed', String(erasing));
+      colorButton.classList.toggle('hl-on', active && !erasing);
+      if (daily) colorButton.setAttribute('aria-pressed', String(active && !erasing));
+      for (const layer of layers.values()) updateLayerMode(layer);
     }
 
     function renderControls() {
@@ -1121,7 +1141,7 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
     for (const item of colors) {
       const btn = button(item[0], '', 'hl-dot', palette);
       btn.style.setProperty('--hl-color', item[1]);
-      btn.onclick = () => { color = item; renderControls(); update(); setActive(true); };
+      btn.onclick = () => { color = item; renderControls(); update(); setActive(true); if (daily) setPanel(null); };
     }
     palette.append(intensityControl);
     for (const item of widths) {
@@ -1132,29 +1152,107 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
       btn.onclick = () => { width = item; renderControls(); setPanel(null); widthButton.focus(); };
     }
     colorButton.onclick = () => {
-      if (!palette.hidden) { setPanel(null); return; }
+      if (daily && active && !erasing) { setPanel(null); setActive(false); return; }
+      if (!palette.hidden && !daily) { setPanel(null); return; }
       update();
       setActive(true);
       setPanel(palette);
     };
     widthButton.onclick = () => setPanel(widthPanel.hidden ? widthPanel : null);
-    offButton.onclick = () => { setPanel(null); setActive(false); colorButton.focus(); };
+    if (offButton) offButton.onclick = () => { setPanel(null); setActive(false); colorButton.focus(); };
+    if (eraserButton) eraserButton.onclick = () => {
+      setPanel(null);
+      update();
+      setActive(!erasing, true);
+    };
 
     function save() {
       try { localStorage.setItem(storeKey, JSON.stringify(saved)); } catch {}
     }
 
-    function points(event, layer) {
+    function geometry(anchor) {
+      const rect = anchor.getBoundingClientRect();
+      const css = getComputedStyle(anchor);
+      const angle = (parseFloat(css.rotate) || 0) * Math.PI / 180;
+      const scale = parseFloat(css.scale) || 1;
+      return {
+        x: rect.left + rect.width / 2, y: rect.top + rect.height / 2,
+        w: anchor.offsetWidth * scale, h: anchor.offsetHeight * scale,
+        cos: Math.cos(angle), sin: Math.sin(angle)
+      };
+    }
+
+    function anchoredElement(layer, id) {
+      return layer.parentElement.querySelector('[data-notebook-id="' + CSS.escape(id) + '"]:not(.is-slot)');
+    }
+
+    function points(event, layer, anchor) {
+      if (anchor) {
+        const g = geometry(anchor), x = event.clientX - g.x, y = event.clientY - g.y;
+        return [Math.round((x * g.cos + y * g.sin) / g.w * 1000),
+          Math.round((-x * g.sin + y * g.cos) / g.h * 1000)].join(',');
+      }
       const rect = layer.getBoundingClientRect();
       const clamp = value => Math.round(Math.max(0, Math.min(1000, value * 1000)));
       return [clamp((event.clientX - rect.left) / rect.width), clamp((event.clientY - rect.top) / rect.height)].join(',');
     }
 
+    const lineMarks = new WeakMap();
+    function paintLine(layer, line, mark) {
+      if (!mark.anchor) {
+        line.setAttribute('points', mark.points.join(' '));
+        return;
+      }
+      const anchor = anchoredElement(layer, mark.anchor);
+      const bounds = layer.getBoundingClientRect();
+      line.toggleAttribute('hidden', !anchor);
+      if (!anchor || !bounds.width || !bounds.height) return;
+      const g = geometry(anchor);
+      const projected = mark.points.map(pair => {
+        const [x,y] = pair.split(',').map(Number);
+        const dx = x / 1000 * g.w, dy = y / 1000 * g.h;
+        return [(g.x + dx * g.cos - dy * g.sin - bounds.left) / bounds.width * 1000,
+          (g.y + dx * g.sin + dy * g.cos - bounds.top) / bounds.height * 1000].join(',');
+      });
+      line.setAttribute('points', projected.join(' '));
+    }
+
     function trace(layer, mark) {
       const line = doc.createElementNS(svgNamespace, 'polyline');
-      for (const [key, value] of Object.entries({fill:'none',stroke:mark.color,'stroke-opacity':mark.intensity ?? 0.28,'stroke-width':mark.width,'stroke-linecap':'round','stroke-linejoin':'round','vector-effect':'non-scaling-stroke',points:mark.points.join(' ')})) line.setAttribute(key, value);
+      for (const [key, value] of Object.entries({fill:'none',stroke:mark.color,'stroke-opacity':mark.intensity ?? 0.28,'stroke-width':mark.width,'stroke-linecap':'round','stroke-linejoin':'round','vector-effect':'non-scaling-stroke'})) line.setAttribute(key, value);
+      lineMarks.set(line, mark);
       layer.append(line);
+      paintLine(layer, line, mark);
       return line;
+    }
+
+    function eraseAt(event, layer) {
+      const line = doc.elementFromPoint(event.clientX, event.clientY);
+      if (line?.parentElement !== layer) return;
+      const mark = lineMarks.get(line);
+      const marks = saved[layer.dataset.key];
+      const index = marks?.indexOf(mark) ?? -1;
+      if (index < 0) return;
+      marks.splice(index, 1);
+      line.remove();
+      erased.push({key:layer.dataset.key,mark,order:++order});
+      save();
+      updateUndo();
+    }
+
+    let queued = false;
+    function refreshAnchoredMarks() {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(() => {
+        queued = false;
+        for (const layer of layers.values()) {
+          for (const line of layer.children) {
+            const mark = lineMarks.get(line);
+            if (mark?.anchor) paintLine(layer, line, mark);
+          }
+        }
+      });
     }
 
     function mount(board, id) {
@@ -1166,7 +1264,8 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
         existing.remove();
       }
       const layer = doc.createElementNS(svgNamespace, 'svg');
-      layer.setAttribute('class', active ? 'hl-layer hl-active' : 'hl-layer');
+      layer.classList.add('hl-layer');
+      updateLayerMode(layer);
       layer.setAttribute('viewBox', '0 0 1000 1000');
       layer.setAttribute('preserveAspectRatio', 'none');
       layer.setAttribute('aria-hidden', 'true');
@@ -1180,18 +1279,29 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
         if (drawing || !event.isPrimary || event.button !== 0) return;
         event.preventDefault();
         layer.setPointerCapture(event.pointerId);
-        const mark = {color:color[1],intensity,width:width[1],points:[points(event, layer)],order:++order};
-        drawing = {layer,mark,line:trace(layer,mark),pointer:event.pointerId};
+        if (erasing) {
+          drawing = {layer,pointer:event.pointerId,erase:true};
+          eraseAt(event, layer);
+          return;
+        }
+        const anchor = daily ? doc.elementsFromPoint(event.clientX, event.clientY)
+          .map(part => part.closest('[data-notebook-id]:not(.is-slot)'))
+          .find(part => part && layer.parentElement.contains(part)) : null;
+        const mark = {color:color[1],intensity,width:width[1],points:[points(event, layer, anchor)],order:++order};
+        if (anchor) mark.anchor = anchor.dataset.notebookId;
+        drawing = {layer,anchor,mark,line:trace(layer,mark),pointer:event.pointerId};
       };
       layer.onpointermove = event => {
         if (drawing?.layer !== layer || drawing.pointer !== event.pointerId) return;
-        const next = points(event, layer);
+        if (drawing.erase) { eraseAt(event, layer); return; }
+        const next = points(event, layer, drawing.anchor);
         if (next === drawing.mark.points.at(-1)) return;
         drawing.mark.points.push(next);
-        drawing.line.setAttribute('points', drawing.mark.points.join(' '));
+        paintLine(layer, drawing.line, drawing.mark);
       };
       function finish(event) {
         if (drawing?.layer !== layer || drawing.pointer !== event.pointerId) return;
+        if (drawing.erase) { drawing = null; return; }
         if (drawing.mark.points.length < 2) drawing.line.remove();
         else {
           (saved[key] ??= []).push(drawing.mark);
@@ -1204,7 +1314,7 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
     }
 
     function updateUndo() {
-      undoButton.disabled = ![...layers.values()].some(layer => saved[layer.dataset.key]?.length);
+      undoButton.disabled = ![...layers.values()].some(layer => saved[layer.dataset.key]?.length || erased.some(action => action.key === layer.dataset.key));
     }
 
     function update() {
@@ -1213,6 +1323,7 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
       if (date !== selectedDate) {
         for (const layer of layers.values()) layer.remove();
         layers.clear();
+        erased.length = 0;
         drawing = null;
         selectedDate = date;
       }
@@ -1225,11 +1336,22 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
     }
 
     undoButton.onclick = () => {
-      const recent = [...layers.values()].filter(layer => saved[layer.dataset.key]?.length)
+      const activeLayers = [...layers.values()];
+      const recent = activeLayers.filter(layer => saved[layer.dataset.key]?.length)
         .sort((a,b) => saved[b.dataset.key].at(-1).order - saved[a.dataset.key].at(-1).order)[0];
-      if (!recent) return;
-      saved[recent.dataset.key].pop();
-      recent.lastElementChild?.remove();
+      const restored = erased.findLast(action => activeLayers.some(layer => layer.dataset.key === action.key));
+      if (restored && (!recent || restored.order > saved[recent.dataset.key].at(-1).order)) {
+        erased.splice(erased.indexOf(restored), 1);
+        const marks = saved[restored.key];
+        marks.push(restored.mark);
+        marks.sort((a,b) => a.order - b.order);
+        const layer = activeLayers.find(candidate => candidate.dataset.key === restored.key);
+        layer.replaceChildren();
+        marks.forEach(mark => trace(layer, mark));
+      } else if (recent) {
+        saved[recent.dataset.key].pop();
+        recent.lastElementChild?.remove();
+      }
       save();
       updateUndo();
     };
@@ -1239,6 +1361,15 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
     doc.addEventListener('change', update);
     const observer = new doc.defaultView.MutationObserver(update);
     observer.observe(placement, {subtree:true,childList:true,attributes:true,attributeFilter:['hidden','aria-selected']});
+    if (daily) {
+      const notebook = placement.querySelector('#note-content');
+      const geometryObserver = new MutationObserver(changes => {
+        if (changes.some(change => !change.target.closest?.('.hl-layer') &&
+          (change.type === 'childList' || change.target.matches('.notebook-object,.notebook-segments')))) refreshAnchoredMarks();
+      });
+      geometryObserver.observe(notebook, {subtree:true,childList:true,attributes:true,attributeFilter:['style']});
+      new ResizeObserver(refreshAnchoredMarks).observe(notebook);
+    }
     setPanel(null);
     setActive(false);
     renderControls();
@@ -1344,6 +1475,11 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
     remove.setAttribute('aria-label', 'Quitar pegatina seleccionada');
     remove.disabled = true;
     tools.append(label, add, remove, picker, status);
+    if (name === 'dia') {
+      label.hidden = true;
+      add.hidden = true;
+      tools.hidden = true;
+    }
 
     const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
     function save() {
@@ -1352,6 +1488,7 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
     }
     function actions() {
       remove.disabled = !selected;
+      if (name === 'dia') tools.hidden = !selected;
     }
     function select(id) {
       selected = id;
@@ -1431,7 +1568,7 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
     }
 
     function sync() {
-      const toolbar = root.querySelector(name === 'dia' ? '.today-tools .hl-row' : '.hl-tools');
+      const toolbar = root.querySelector(name === 'dia' ? '.day-markup-tools' : '.hl-tools');
       const grid = getGrid();
       if (!grid) return;
       if (toolbar && !toolbar.contains(tools)) toolbar.append(tools);
@@ -1458,7 +1595,8 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
       repaint();
       status.textContent = '';
       save();
-      add.focus();
+      if (name === 'dia') root.querySelector('.notebook-decor summary')?.focus();
+      else add.focus();
     };
     picker.onchange = async () => {
       const file = picker.files[0];
@@ -2160,8 +2298,8 @@ window.addEventListener('pagehide',stop);updateLabel();
 #notes-section .notebook-segments{position:relative;isolation:isolate}
 #notes-section .notebook-object.is-floating{position:absolute;margin:0;z-index:2}
 #notes-section .notebook-object.is-text{z-index:4}
-#notes-section .notebook-object.is-floating.is-selected{z-index:3}
-#notes-section .notebook-object.is-text.is-selected{z-index:5}
+#notes-section .notebook-object.is-floating.is-selected{z-index:5}
+#notes-section .notebook-object.is-text.is-selected{z-index:6}
 #notes-section .notebook-object.is-selected{z-index:3}
 #notes-section .notebook-object.is-slot{visibility:hidden;pointer-events:none}
 #notes-section .notebook-object.is-floating .notebook-sticker-art{height:var(--object-height)}
@@ -2445,6 +2583,7 @@ window.addEventListener('pagehide',stop);updateLabel();
        artwork.append(stickerImage);
      }else{
        const field=document.createElement('textarea');
+       field.readOnly=true;
        if(item.kind==='text'){
          field.className='notebook-text-box';
          field.setAttribute('aria-label',labels.text);
@@ -2488,14 +2627,36 @@ window.addEventListener('pagehide',stop);updateLabel();
        return;
      }
      object.tabIndex=0;
+     if(item.id)object.dataset.notebookId=item.id;
      object.setAttribute('aria-label',labels[item.kind]);
      if(selected===item)object.classList.add('is-selected');
      if(item.position)moveTo(item,object,canvasPosition(item.position),false);
      object.addEventListener('focusin',()=>select(item,object));
+     const editor=object.querySelector('textarea');
+     let lastEditTap=null;
+     function edit(){
+       if(!editor)return;
+       editor.readOnly=false;
+       editor.focus({preventScroll:true});
+     }
+     editor?.addEventListener('blur',()=>{editor.readOnly=true;});
+     object.addEventListener('keydown',event=>{
+       if(event.target===object&&event.key==='Enter'&&editor){
+         event.preventDefault();
+         edit();
+       }
+     });
      object.addEventListener('click',event=>{
-       if(!kind&&!event.target.closest('button,input')){
-         select(item,object);
-         if(event.target.matches('textarea'))event.target.focus({preventScroll:true});
+       if(kind||event.target.closest('button,input')||!editor)return;
+       select(item,object);
+       if(!editor.readOnly)return;
+       if(lastEditTap&&event.timeStamp-lastEditTap.time<450&&
+         Math.hypot(event.clientX-lastEditTap.x,event.clientY-lastEditTap.y)<24){
+         lastEditTap=null;
+         edit();
+       }else{
+         lastEditTap={time:event.timeStamp,x:event.clientX,y:event.clientY};
+         object.focus({preventScroll:true});
        }
      });
      object.addEventListener('contextmenu',event=>{
@@ -2655,7 +2816,9 @@ window.addEventListener('pagehide',stop);updateLabel();
    if(!original)return;
    try{items=JSON.parse(localStorage.getItem(key())||'[]');if(!Array.isArray(items))items=[];}catch{items=[];}
    items=items.filter(item=>item&&Object.hasOwn(labels,item.kind));
+   let assignedIds=false;
    for(const item of items){
+     if((item.kind==='text'||item.kind==='frame')&&!item.id){item.id=crypto.randomUUID();assignedIds=true;}
      // Keep placements made with the earlier tape menu.
      if(item.kind==='tape'&&stickerLibrary.has('cinta-'+item.design)){
        item.kind='sticker';
@@ -2664,6 +2827,7 @@ window.addEventListener('pagehide',stop);updateLabel();
      }
      if(!item.position||item.at!==undefined)item.at=clamp(item.at??original.value.length,0,original.value.length);
    }
+   if(assignedIds)save();
    render();
  }
  const options=decor.querySelector('[data-decor-options]');
@@ -2831,6 +2995,7 @@ window.addEventListener('pagehide',stop);updateLabel();
    const item={kind:type,text:'',motif,color:decor.querySelector('input[type=color]').value};
    let pixels=type==='tape'?width*.46:type==='sticker'?52:text?220:300;
    let height=type==='tape'?26:type==='sticker'?52:text?70:105;
+   if(text||type==='frame')item.id=crypto.randomUUID();
    if(type==='frame'){
      item.style=frameStyle;
      if(frameStyle==='taped'||frameStyle==='punched')height=Math.min(255,Math.max(180,content.clientWidth*.29));
@@ -2852,7 +3017,9 @@ window.addEventListener('pagehide',stop);updateLabel();
    const object=surface.lastElementChild;
    if(text)draft={item,object};
    else save();
-   (object.querySelector('textarea')||object).focus({preventScroll:true});
+   const editor=object.querySelector('textarea');
+   if(editor)editor.readOnly=false;
+   (editor||object).focus({preventScroll:true});
  }
  function directWriting(event){
    const field=event.target.closest('#free-note,.notebook-text');
