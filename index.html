@@ -2343,11 +2343,10 @@ window.addEventListener('pagehide',stop);updateLabel();
 #notes-section .notebook-text-box:focus-visible{outline:1px dashed #9b6e80}
 #notes-section .notebook-tools{display:none;position:absolute;inset:auto -2px calc(100% + 12px);height:36px;z-index:2;pointer-events:none}
 #notes-section .notebook-object.is-selected .notebook-tools{display:block}
-#notes-section .notebook-tools button,#notes-section .notebook-tools input{position:absolute;top:0;width:36px;height:36px;padding:0;font-size:22px;touch-action:manipulation;pointer-events:auto}
+#notes-section .notebook-tools button{position:absolute;top:0;width:36px;height:36px;padding:0;font-size:22px;touch-action:manipulation;pointer-events:auto}
 #notes-section .notebook-tools .notebook-remove{left:-3px}
 #notes-section .notebook-tools .notebook-rotate{right:-3px;touch-action:none}
 #notes-section .notebook-rotate span{display:inline-block;transform:rotate(155deg)}
-#notes-section .notebook-tools input{left:50%;transform:translateX(-50%);width:28px;border:1px solid #dbc9c7;border-radius:7px;background:#fff}
 #carmen-diary #notes-section .notebook-object .notebook-resize{display:none;position:absolute;z-index:1;right:0;bottom:0;transform:translate(55%,55%);width:36px;height:36px;min-height:0;padding:0;border:0;border-radius:50%;background:transparent;touch-action:none;cursor:nwse-resize}
 #carmen-diary #notes-section .notebook-object.is-selected .notebook-resize{display:grid;place-items:center}
 #notes-section .notebook-resize::before{content:"⤡";display:grid;place-items:center;width:21px;height:21px;border-radius:50%;background:#fff;color:#91586e;font:700 16px Arial,sans-serif;box-shadow:0 0 0 1px #91586e}
@@ -2839,18 +2838,6 @@ window.addEventListener('pagehide',stop);updateLabel();
        item.angle=((item.angle||0)+15)%360;
        moveTo(item,object,position);save();
      });
-     if(item.kind==='frame'){
-       const recolor=document.createElement('input');
-       recolor.type='color';
-       recolor.value=item.color||'#ab607c';
-       recolor.setAttribute('aria-label','Cambiar color de la nota');
-       recolor.addEventListener('input',()=>{
-         item.color=recolor.value;
-         object.querySelector('.notebook-frame-wrap').style.setProperty('--frame-color',item.color);
-         save();
-       });
-       toolbar.append(recolor);
-     }
      object.append(toolbar);
      const resize=control('','Cambiar tamaño de '+labels[item.kind].toLowerCase(),object);
      resize.className='notebook-resize';
