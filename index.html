@@ -1597,7 +1597,7 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
     style.textContent = `
       .sticker-layer{position:absolute;inset:0;z-index:4;pointer-events:none}
       .monthly #month-grid:has(>.sticker-layer){overflow:visible}
-      .sticker-piece{position:absolute;width:clamp(28px,6%,60px);height:auto;aspect-ratio:1;object-fit:contain;transform:translate(-50%,-50%);pointer-events:auto;touch-action:none;cursor:grab;user-select:none}
+      .sticker-piece{position:absolute;width:calc(clamp(28px,6%,60px) * var(--sticker-scale,1));height:auto;aspect-ratio:1;object-fit:contain;transform:translate(-50%,-50%) rotate(var(--sticker-angle,0deg));pointer-events:auto;touch-action:none;cursor:grab;user-select:none}
       .sticker-piece:active{cursor:grabbing}
       .sticker-piece:focus-visible,.sticker-piece[aria-pressed=true]{outline:2px solid #78534e;outline-offset:3px;border-radius:5px}
       .sticker-tools{display:flex;align-items:center;flex-wrap:wrap;gap:5px;margin-left:12px}
@@ -1633,22 +1633,61 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
     add.setAttribute('aria-label', 'Añadir pegatina');
     const remove = element('button', 'sticker-command');
     remove.type = 'button';
-    remove.textContent = 'Quitar';
-    remove.setAttribute('aria-label', 'Quitar pegatina seleccionada');
+    remove.textContent = name === 'mes' ? '×' : 'Quitar';
+    remove.setAttribute('aria-label', name === 'mes' ? 'Eliminar pegatina seleccionada' : 'Quitar pegatina seleccionada');
+    if (name === 'mes') remove.title = 'Eliminar pegatina seleccionada';
     remove.disabled = true;
-    if (name !== 'dia') tools.append(label, add, picker);
-    tools.append(remove, status);
-    if (name === 'dia') {
-      tools.hidden = true;
+    const adjustments = [];
+    if (name === 'mes') {
+      const edit = (text, accessibleName, apply) => {
+        const button = element('button', 'sticker-command');
+        button.type = 'button';
+        button.textContent = text;
+        button.setAttribute('aria-label', accessibleName);
+        button.onclick = () => {
+          const sticker = months[month]?.find(item => item.id === selected);
+          const image = [...layer.children].find(item => item.dataset.id === selected);
+          if (!sticker || !image || drag) return;
+          status.textContent = apply(sticker);
+          appearance(image, sticker);
+          save();
+          actions();
+        };
+        adjustments.push(button);
+        return button;
+      };
+      const resize = step => sticker => {
+        sticker.scale = clamp(Math.round((stickerScale(sticker) + step) * 4) / 4, 0.5, 4);
+        return 'Tamaño: ' + Math.round(sticker.scale * 100) + ' %';
+      };
+      const rotate = step => sticker => {
+        sticker.angle = (stickerAngle(sticker) + step + 360) % 360;
+        return 'Giro: ' + sticker.angle + '°';
+      };
+      edit('−', 'Reducir pegatina', resize(-0.25));
+      edit('+', 'Agrandar pegatina', resize(0.25));
+      edit('↶', 'Girar pegatina a la izquierda', rotate(-15));
+      edit('↷', 'Girar pegatina a la derecha', rotate(15));
     }
+    if (name !== 'dia') tools.append(label, add, ...adjustments, picker);
+    tools.append(remove, status);
+    if (name === 'dia') tools.hidden = true;
 
     const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+    const stickerScale = sticker => clamp(Number.isFinite(sticker.scale) ? sticker.scale : 1, 0.5, 4);
+    const stickerAngle = sticker => Number.isFinite(sticker.angle) ? sticker.angle : 0;
+    function appearance(image, sticker) {
+      if (name !== 'mes') return;
+      image.style.setProperty('--sticker-scale', stickerScale(sticker));
+      image.style.setProperty('--sticker-angle', stickerAngle(sticker) + 'deg');
+    }
     function save() {
       try { localStorage.setItem(key, JSON.stringify(months)); }
       catch { status.textContent = 'La pegatina queda visible durante esta sesión.'; }
     }
     function actions() {
       remove.disabled = !selected;
+      for (const button of adjustments) button.disabled = !selected;
       if (name === 'dia') tools.hidden = !selected;
     }
     function select(id) {
@@ -1682,6 +1721,8 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
         image.setAttribute('aria-pressed', String(selected === sticker.id));
         const position = () => { image.style.left = sticker.x + '%'; image.style.top = sticker.y + '%'; };
         position();
+        appearance(image, sticker);
+        image.onclick = () => select(sticker.id);
         image.onfocus = () => select(sticker.id);
         image.onpointerdown = event => {
           if (drag || !event.isPrimary || event.button !== 0) return;
@@ -1711,6 +1752,12 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
           drag = null;
         };
         image.onkeydown = event => {
+          if (name === 'mes' && !drag && (event.key === 'Delete' || event.key === 'Backspace')) {
+            event.preventDefault();
+            select(sticker.id);
+            remove.click();
+            return;
+          }
           const directions = {ArrowLeft:[-2,0],ArrowRight:[2,0],ArrowUp:[0,-2],ArrowDown:[0,2]};
           if (drag || !Object.hasOwn(directions,event.key)) return;
           event.preventDefault();
