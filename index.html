@@ -1512,7 +1512,6 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
     #carmen-diary .day-markup-tools .hl-tools button[hidden]{display:none}
     #carmen-diary .day-markup-tools .hl-round svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
     #carmen-diary .day-markup-tools .hl-color{background:#fefcf9;color:#78534e}
-    #carmen-diary .day-markup-tools .hl-color.hl-on{background:#fff1c1}
     #carmen-diary .notebook-writing-tools{display:flex;gap:4px;align-items:center}
     #carmen-diary .day-markup-tools :is(.notebook-write,.notebook-align-toggle,.notebook-sheet-size,.notebook-alignment button){min-width:34px;height:34px;border:1px solid #d7c2bd;border-radius:8px;background:#fefcf9;color:#78534e;cursor:pointer}
     #carmen-diary .day-markup-tools :is(.notebook-write,.notebook-align-toggle,.notebook-sheet-size,.notebook-alignment button)[aria-pressed=true]{background:#eed9df}
@@ -1529,10 +1528,13 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
     .hl-tools button{display:inline-grid;place-items:center;min-width:30px;min-height:30px;padding:0 4px;border:1px solid #d7c2bd;border-radius:8px;background:#fefcf9;color:#78534e;font:600 15px system-ui;cursor:pointer}
     .hl-tools button:disabled{opacity:.48;cursor:default}
     .hl-tools button:focus-visible,.hl-tools button[aria-pressed=true]{outline:2px solid #78534e;outline-offset:2px}
-    .hl-tools .hl-round,.hl-tools .hl-off,.hl-tools .hl-dot{border-radius:50%;width:32px;height:32px;padding:0}
+    .hl-tools .hl-round,.hl-tools .hl-dot{border-radius:50%;width:32px;height:32px;padding:0}
+    .hl-tools > .hl-round:not([hidden]),.hl-tools .agenda-sticker-library>summary{box-sizing:border-box;width:34px;height:34px;border:1px solid #d7c2bd;border-radius:50%;background:#fefcf9;color:#78534e;padding:0}
+    .hl-tools button[hidden]{display:none!important}
+    .hl-tools .agenda-sticker-library>summary:focus-visible,.hl-tools .agenda-sticker-library[open]>summary{outline:2px solid #78534e;outline-offset:2px}
+    #carmen-diary .hl-tools .agenda-sticker-folders{top:auto;bottom:calc(100% + 5px)}
     .hl-tools .hl-color,.hl-tools .hl-dot{background:var(--hl-color)}
     .hl-tools .hl-on{outline:2px solid #78534e;outline-offset:2px}
-    .hl-tools .hl-off{background:#f3ebe7;font-size:20px}
     .hl-sample{width:16px;height:var(--hl-line,4px);border-radius:5px;background:#78534e}
     .hl-panel{position:absolute;top:calc(100% + 5px);left:0;z-index:5;min-width:max-content;background:#fefcf9;border:1px solid #dfcdc7;padding:9px;border-radius:10px;box-shadow:0 5px 14px #533a3523}
     .hl-panel[hidden]{display:none!important}
@@ -1562,7 +1564,7 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
     const row = create(doc, 'div', 'hl-row');
     const bar = create(doc, 'div', 'hl-tools');
     bar.setAttribute('role', 'group');
-    bar.setAttribute('aria-label', 'Subrayador pastel');
+    bar.setAttribute('aria-label', 'Herramientas de dibujo');
     const daily = name === 'hoy';
     const weekly = name === 'semana';
     const inkTools = daily || weekly || name === 'mes';
@@ -1591,7 +1593,7 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
     const widthButton = button('Elegir grosor del subrayador', '', 'hl-round');
     const sample = create(doc, 'span', 'hl-sample');
     widthButton.append(sample);
-    const pencilButton = inkTools ? button(daily ? 'Lápiz' : 'Bolígrafo', '', 'hl-round hl-pencil') : null;
+    const pencilButton = inkTools ? button('Bolígrafo', '', 'hl-round hl-pencil') : null;
     const pencilPanel = inkTools ? create(doc, 'div', 'hl-panel hl-palette') : null;
     const eraserButton = inkTools ? button('Goma', '', 'hl-round hl-eraser') : null;
     if (eraserButton) eraserButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 13 8-8a2 2 0 0 1 3 0l4 4a2 2 0 0 1 0 3l-7 7H8l-4-4a1.4 1.4 0 0 1 0-2Z"/><path d="m8 9 8 8M12 19h8"/></svg>';
@@ -1602,8 +1604,7 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
       widthButton.hidden = true;
       bar.append(pencilButton, pencilPanel);
     }
-    const undoButton = daily ? null : button('Deshacer última marca', '↶', 'hl-undo');
-    const offButton = daily ? null : button('Salir del subrayado', '×', 'hl-off');
+    const undoButton = button('Deshacer último trazo', '↶', 'hl-round hl-undo');
     const palette = create(doc, 'div', 'hl-panel hl-palette');
     const widthPanel = create(doc, 'div', 'hl-panel hl-widths');
     bar.append(palette, widthPanel);
@@ -1658,7 +1659,6 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
       erasing = value && erase;
       pencil = value && draw;
       pencilButton?.setAttribute('aria-pressed', String(pencil));
-      if (offButton) offButton.disabled = !value;
       if (eraserButton) eraserButton.setAttribute('aria-pressed', String(erasing));
       colorButton.classList.toggle('hl-on', active && !erasing && !pencil);
       if (inkTools) colorButton.setAttribute('aria-pressed', String(active && !erasing && !pencil));
@@ -1697,7 +1697,6 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
       setPanel(palette);
     };
     widthButton.onclick = () => setPanel(widthPanel.hidden ? widthPanel : null);
-    if (offButton) offButton.onclick = () => { setPanel(null); setActive(false); colorButton.focus(); };
     if (eraserButton) eraserButton.onclick = () => {
       setPanel(null);
       update();
@@ -1729,7 +1728,7 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
         setPanel(null);
       });
       bar.addEventListener('click', event => {
-        if (active && !event.target.closest('.sticker-tools')) placement.dispatchEvent(new Event(daily ? 'notebook-inking' : 'agenda-inking'));
+        if (active && !event.target.closest('.sticker-tools,.agenda-sticker-library')) placement.dispatchEvent(new Event(daily ? 'notebook-inking' : 'agenda-inking'));
       });
     }
 
@@ -2305,7 +2304,7 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
       const toolbar = root.querySelector(name === 'dia' ? '.day-markup-tools' : '.hl-tools');
       const grid = getGrid();
       if (!grid) return;
-      if (toolbar && !toolbar.contains(tools)) toolbar.append(tools);
+      if (toolbar && !toolbar.contains(tools)) toolbar.insertBefore(tools, toolbar.querySelector('.hl-undo'));
       const next = currentMonth();
       if (!next) return;
       if (next === month && layer?.isConnected && layer.parentElement === grid) return;
@@ -3759,8 +3758,23 @@ window.addEventListener('pagehide',stop);updateLabel();
  const notebookGallery=window.agendaStickerFolders.create(document,sticker=>{
    stickerLibrary.set(sticker.id,sticker);
    stickerStyle=sticker.id;
- },()=>uploadSticker.click());
- stickerOptions.append(notebookGallery,uploadSticker);
+   choose('sticker');
+ },()=>uploadSticker.click(),()=>{
+   menu.open=false;
+   root.dispatchEvent(new Event('notebook-writing',{bubbles:true}));
+ });
+ const dayToolbar=root.querySelector('.day-markup-tools');
+ const attachGallery=()=>{
+   const markupTools=dayToolbar.querySelector('.hl-tools');
+   if(!markupTools)return;
+   galleryObserver.disconnect();
+   markupTools.insertBefore(notebookGallery,markupTools.querySelector('.hl-undo'));
+ };
+ const galleryObserver=new MutationObserver(attachGallery);
+ galleryObserver.observe(dayToolbar,{childList:true,subtree:true});
+ attachGallery();
+ stickerOptions.append(uploadSticker);
+ diary.closest('#panel-diary').addEventListener('notebook-inking',()=>{notebookGallery.open=false;});
  uploadSticker.onchange=async()=>{
    const file=uploadSticker.files[0];uploadSticker.value='';
    if(!file)return;
@@ -3773,6 +3787,7 @@ window.addEventListener('pagehide',stop);updateLabel();
      const src=canvas.toDataURL('image/png');
      const sticker=window.agendaStickerFolders.personal().find(item=>item.src===src)||{id:crypto.randomUUID(),name:file.name.replace(/\.png$/i,''),src};
      window.agendaStickerFolders.save(sticker);stickerLibrary.set(sticker.id,sticker);stickerStyle=sticker.id;
+     choose('sticker');
      notebookGallery.open=false;
    }catch{placement.textContent='No se pudo añadir la pegatina.';}
    finally{URL.revokeObjectURL(url);}
@@ -3790,7 +3805,15 @@ window.addEventListener('pagehide',stop);updateLabel();
    placement.textContent=kind==='text'?'Toca donde quieras escribir.':kind==='sticker'?'Toca Mi agenda o Mi planificación para colocar la pegatina.':'Toca el cuaderno donde quieras colocar el elemento.';
    kinds.forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.kind===kind)));
  }
- kinds.forEach(button=>button.addEventListener('click',()=>choose(button.dataset.kind)));
+ kinds.forEach(button=>button.addEventListener('click',()=>{
+   if(button.dataset.kind==='sticker'){
+     notebookGallery.open=true;
+     notebookGallery.querySelector('summary').focus();
+   }else{
+     notebookGallery.open=false;
+     choose(button.dataset.kind);
+   }
+ }));
  symbols.forEach(button=>button.addEventListener('click',()=>{
    motif=button.dataset.symbol;currentSymbol.textContent=motif||'✿';picker.open=false;
    picker.querySelector('summary').focus();
