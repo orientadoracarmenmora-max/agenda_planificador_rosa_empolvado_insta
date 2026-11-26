@@ -493,7 +493,7 @@ window.agendaSchoolDays=(()=>{
  .agenda-sticker-library{position:relative;color:#78534e}
 .agenda-sticker-library>summary{display:grid;place-items:center;width:34px;height:34px;list-style:none;cursor:pointer;border:1px solid #d7c2bd;border-radius:8px;background:#fefcf9;color:#78534e}
 .agenda-sticker-library>summary::-webkit-details-marker{display:none}
-.agenda-sticker-library>summary svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.agenda-sticker-library>summary .agenda-sticker-cover{width:24px;height:24px;object-fit:contain;pointer-events:none}
 .agenda-sticker-library:not([open])>.agenda-sticker-folders{display:none}
 .agenda-sticker-folders{position:absolute;top:calc(100% + 5px);left:0;z-index:16;width:min(295px,75vw);display:grid;gap:5px;padding:7px;border:1px solid #dfcdc7;border-radius:10px;background:#fefcf9}
 .agenda-sticker-tiles,.agenda-sticker-pictures:not([hidden]){display:flex;align-items:center;gap:5px;overflow-x:auto;padding:3px;scroll-snap-type:x proximity}
@@ -527,7 +527,10 @@ window.agendaStickerFolders=(()=>{
    const el=(tag,cls)=>{const node=doc.createElement(tag);if(cls)node.className=cls;return node;};
    const wrapper=el('details','agenda-sticker-library'),summary=el('summary'),panel=el('div','agenda-sticker-folders');
    summary.title='Pegatinas';summary.setAttribute('aria-label','Pegatinas');
-   summary.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v10l-6 6H4zM14 20v-6h6M8 9h.01M12 9h.01M8 13c1 1 3 1 4 0"/></svg>';
+   const cover=el('img','agenda-sticker-cover');
+   cover.src=folders[0][1].find(item=>item.id==='corazon').src;
+   cover.alt='';
+   summary.append(cover);
    wrapper.append(summary,panel);
    const plus=el('button');plus.type='button';plus.textContent='+';plus.setAttribute('aria-label','Añadir pegatina propia');plus.onclick=add;
    const tiles=el('div','agenda-sticker-tiles'),pictures=el('div','agenda-sticker-pictures');
@@ -1554,6 +1557,7 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
     @media print{#carmen-diary .day-markup-tools{display:none}}
     #carmen-diary .day-markup-tools .sticker-tools{margin:0}
     #carmen-diary .day-markup-tools .sticker-command{font:600 12px system-ui;padding:4px 8px;border:1px solid #d7c2bd;border-radius:8px;background:#fefcf9;color:#78534e;cursor:pointer}
+    .monthly-markup-row>.completion-tools [aria-label="No lo he hecho"]{display:none!important}
     .hl-row>.completion-tools,.hl-row>.marks,#app [data-template-id="weekly-summary-panel"] .hl-row>.completion-tools{margin:0!important}
     .hl-tools{position:relative;z-index:12;padding:2px 0;color:#78534e}
     .hl-tools button{display:inline-grid;place-items:center;min-width:30px;min-height:30px;padding:0 4px;border:1px solid #d7c2bd;border-radius:8px;background:#fefcf9;color:#78534e;font:600 15px system-ui;cursor:pointer}
@@ -1564,7 +1568,7 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
     .hl-tools button[hidden]{display:none!important}
     .hl-tools .agenda-sticker-library>summary:focus-visible,.hl-tools .agenda-sticker-library[open]>summary{outline:2px solid #78534e;outline-offset:2px}
     #carmen-diary .hl-tools .agenda-sticker-folders{top:auto;bottom:calc(100% + 5px)}
-    .hl-tools .hl-color,.hl-tools .hl-dot{background:var(--hl-color)}
+    .hl-tools .hl-dot{background:var(--hl-color)}
     .hl-tools .hl-on{outline:2px solid #78534e;outline-offset:2px}
     .hl-sample{width:16px;height:var(--hl-line,4px);border-radius:5px;background:#78534e}
     .hl-panel{position:absolute;top:calc(100% + 5px);left:0;z-index:5;min-width:max-content;background:#fefcf9;border:1px solid #dfcdc7;padding:9px;border-radius:10px;box-shadow:0 5px 14px #533a3523}
@@ -1600,6 +1604,7 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
     const weekly = name === 'semana';
     const inkTools = daily || weekly || name === 'mes';
     if (inkTools && !daily) row.classList.add('weekly-markup-row');
+    if (name === 'mes') row.classList.add('monthly-markup-row');
     if (daily) {
       placement.querySelector('.day-markup-tools').prepend(row);
       row.append(bar);
@@ -1635,7 +1640,8 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
       widthButton.hidden = true;
       bar.append(pencilButton, pencilPanel);
     }
-    const undoButton = button('Deshacer último trazo', '↶', 'hl-round hl-undo');
+    const undoButton = button('Deshacer último trazo', '', 'hl-round hl-undo');
+    undoButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l-5 5 5 5m-5-5h10a5 5 0 0 1 0 10h-3"/></svg>';
     const palette = create(doc, 'div', 'hl-panel hl-palette');
     const widthPanel = create(doc, 'div', 'hl-panel hl-widths');
     bar.append(palette, widthPanel);
@@ -1697,7 +1703,6 @@ document.addEventListener('click',e=>{const header=e.target.closest('.calendar-h
     }
 
     function renderControls() {
-      colorButton.style.setProperty('--hl-color', color[1]);
       colorButton.setAttribute('aria-label', inkTools ? 'Subrayador' : 'Color del subrayador: ' + color[0]);
       widthButton.setAttribute('aria-label', 'Grosor del subrayador: ' + width[0]);
       sample.style.setProperty('--hl-line', width[2] + 'px');
