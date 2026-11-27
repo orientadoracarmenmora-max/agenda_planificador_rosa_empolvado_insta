@@ -2125,7 +2125,7 @@ function hookCalendar(){const w=cf.contentWindow;if(!w.calendarStore)return;cons
     const key = 'carmen-agenda:pegatinas-v1:' + location.pathname.replace(/index\.html$/, '').replace(/\/?$/, '/') + (name === 'mes' ? '' : ':' + name);
     let months = {};
     try { months = JSON.parse(localStorage.getItem(key)) || {}; } catch {}
-    let month, layer, selected, drag;
+    let month, layer, selected, drag, pendingSticker;
     const weekly = name === 'semana';
     const adjustable = name !== 'dia';
     const monthlySheet = name === 'mes' ? root.querySelector('.monthly') : null;
@@ -2379,6 +2379,8 @@ function hookCalendar(){const w=cf.contentWindow;if(!w.calendarStore)return;cons
       drag = null;
       resizing = null;
       month = next;
+      pendingSticker = null;
+      status.textContent = '';
       selected = null;
       actions();
       layer = element('div','sticker-layer');
@@ -2392,12 +2394,39 @@ function hookCalendar(){const w=cf.contentWindow;if(!w.calendarStore)return;cons
       gallery = window.agendaStickerFolders.create(doc,sticker=>{
         sync();
         if(!month)return;
-        const id=crypto.randomUUID();
-        (months[month]??=[]).push({id,src:sticker.src,label:sticker.name,x:50,y:50});
-        selected=id;save();actions();repaint();
+        if(weekly){
+          pendingSticker=sticker;
+          status.textContent='Toca el horario para colocar la pegatina.';
+        }else addSticker(sticker,50,50);
       },()=>picker.click(),()=>root.dispatchEvent(new Event('agenda-sticker-active')));
       label.remove();add.remove();tools.prepend(gallery);
       root.addEventListener('agenda-inking',()=>{gallery.open=false;});
+    }
+    function addSticker(sticker,x,y){
+      const id=crypto.randomUUID();
+      (months[month]??=[]).push({id,src:sticker.src,label:sticker.name,x,y});
+      selected=id;
+      status.textContent='';
+      save();
+      actions();
+      repaint();
+    }
+    if(weekly){
+      root.addEventListener('click',event=>{
+        if(!pendingSticker||!event.target.closest('.calendar-grid'))return;
+        const bounds=layer.getBoundingClientRect();
+        if(!bounds.width||!bounds.height)return;
+        event.stopPropagation();
+        const x=clamp((event.clientX-bounds.left)/bounds.width*100,4,96);
+        const y=clamp((event.clientY-bounds.top)/bounds.height*100,4,96);
+        const sticker=pendingSticker;
+        pendingSticker=null;
+        addSticker(sticker,x,y);
+      },true);
+      root.addEventListener('agenda-inking',()=>{
+        pendingSticker=null;
+        status.textContent='';
+      });
     }
     add.onclick = () => picker.click();
     remove.onclick = () => {
@@ -2428,6 +2457,14 @@ function hookCalendar(){const w=cf.contentWindow;if(!w.calendarStore)return;cons
         canvas.width = Math.max(1, Math.round(source.naturalWidth * scale));
         canvas.height = Math.max(1, Math.round(source.naturalHeight * scale));
         canvas.getContext('2d').drawImage(source, 0, 0, canvas.width, canvas.height);
+        if(weekly){
+          const sticker={id:crypto.randomUUID(),src:canvas.toDataURL('image/png'),name:file.name.replace(/\.png$/i,'')};
+          try {window.agendaStickerFolders.save(sticker);} catch {}
+          pendingSticker=sticker;
+          gallery.open=false;
+          status.textContent='Toca el horario para colocar la pegatina.';
+          return;
+        }
         const stickers = months[targetMonth] ??= [];
         const id = crypto.randomUUID();
         stickers.push({id, src:canvas.toDataURL('image/png'), label:file.name.replace(/\.png$/i,''), x:50, y:50});
